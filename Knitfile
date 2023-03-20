@@ -12,38 +12,40 @@ local tools = {
     qemu := qemu-system-riscv64
 }
 
+local O := s
+
 local flags = {
-    rustc := --emit=link --target riscv64imac-unknown-none-elf -O --edition=2021 --crate-type lib -C code-model=medium -C incremental=.incremental
+    rustc := --emit=link,obj --target riscv64imac-unknown-none-elf -C opt-level=$O --edition=2021 --crate-type lib -C code-model=medium -C incremental=.incremental -C embed-bitcode=no
     as := -march=rv64imac_zicsr_zifencei
 }
 
 local src = {
     kernel = knit.rglob("kernel", "*.rs"),
-    lib = knit.rglob("lib", "*.rs"),
+    kmain = knit.rglob("kmain", "*.rs"),
 }
 
 local obj = {
     kernel = {"libkernel.rlib"},
-    lib = {"liblib.rlib"},
-    asm = knit.extrepl(knit.rglob("kernel", "*.s"), ".s", ".o"),
+    kmain = {"libkmain.rlib"},
+    asm = knit.extrepl(knit.rglob(".", "*.s"), ".s", ".o"),
 }
 
-obj.kernel = knit.prefix(obj.kernel, ".obj/kernel/")
-obj.lib = knit.prefix(obj.lib, ".obj/lib/")
-obj.asm = knit.prefix(obj.asm, ".obj/")
+obj.kernel = knit.prefix(obj.kernel, ".obj/")
+obj.kmain = knit.prefix(obj.kmain, ".obj/")
+obj.asm = knit.prefix(obj.asm, ".obj/asm/")
 
 local link = "link/virt.ld"
 
 return b{
-    $ prog.elf: $(obj.asm) $(obj.kernel) $(obj.lib) $(link)[I]
+    $ prog.elf: $(obj.asm) $(obj.kmain) $(obj.kernel) $(link)[I]
         $(tools.ld) -T$(link) $input -o $output
 
-    $ $(obj.kernel): $(src.kernel) $(obj.lib)
-        $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --extern lib=$(obj.lib) --out-dir .obj/kernel
-    $ $(obj.lib): $(src.lib)
-        $(tools.rustc) $(flags.rustc) lib/lib.rs --crate-name lib --out-dir .obj/lib
+    $ $(obj.kmain): $(src.kmain) $(obj.kernel)
+        $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(obj.kernel) --out-dir .obj
+    $ $(obj.kernel): $(src.kernel)
+        $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --out-dir .obj
 
-    $ .obj/%.o: %.s
+    $ .obj/asm/%.o: %.s
         $(tools.as) $(flags.as) $input -c -o $output
     $ %.list: %.elf
         $(tools.objdump) -D $input > $output
