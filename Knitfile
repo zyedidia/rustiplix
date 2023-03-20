@@ -1,0 +1,54 @@
+local knit = require("knit")
+
+local prefix := riscv64-unknown-elf
+
+local tools = {
+    rustc := rustc
+    cc := $prefix-gcc
+    as := $prefix-as
+    ld := $prefix-ld
+    objcopy := $prefix-objcopy
+    objdump := $prefix-objdump
+    qemu := qemu-system-riscv64
+}
+
+local flags = {
+    rustc := --emit=link --target riscv64imac-unknown-none-elf -O --edition=2021 --crate-type lib -C code-model=medium -C incremental=.incremental
+    as := -march=rv64imac_zicsr_zifencei
+}
+
+local src = {
+    kernel = knit.rglob("kernel", "*.rs"),
+    lib = knit.rglob("lib", "*.rs"),
+}
+
+local obj = {
+    kernel = {"libkernel.rlib"},
+    lib = {"liblib.rlib"},
+    asm = knit.extrepl(knit.rglob("kernel", "*.s"), ".s", ".o"),
+}
+
+obj.kernel = knit.prefix(obj.kernel, ".obj/kernel/")
+obj.lib = knit.prefix(obj.lib, ".obj/lib/")
+obj.asm = knit.prefix(obj.asm, ".obj/")
+
+local link = "link/virt.ld"
+
+return b{
+    $ prog.elf: $(obj.asm) $(obj.kernel) $(obj.lib) $(link)[I]
+        $(tools.ld) -T$(link) $input -o $output
+
+    $ $(obj.kernel): $(src.kernel) $(obj.lib)
+        $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --extern lib=$(obj.lib) --out-dir .obj/kernel
+    $ $(obj.lib): $(src.lib)
+        $(tools.rustc) $(flags.rustc) lib/lib.rs --crate-name lib --out-dir .obj/lib
+
+    $ .obj/%.o: %.s
+        $(tools.as) $(flags.as) $input -c -o $output
+    $ %.list: %.elf
+        $(tools.objdump) -D $input > $output
+    $ %.bin: %.elf
+        $(tools.objcopy) $input -O binary $output
+    $ qemu:VB: prog.bin
+        $(tools.qemu) -nographic -bios none -machine virt -kernel $input
+}

@@ -1,0 +1,7 @@
+.knit
+.incremental
+.obj
+
+*.list
+*.elf
+*.bin
