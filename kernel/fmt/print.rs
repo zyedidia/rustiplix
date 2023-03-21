@@ -3,7 +3,7 @@ macro_rules! print
 {
     ($($args:tt)+) => ({
             use core::fmt::Write;
-            let mut uart = kernel::board::virt::UART.lock();
+            let mut uart = $crate::board::virt::UART.lock();
             let _ = write!(uart, $($args)+);
     });
 }
@@ -12,15 +12,15 @@ macro_rules! print
 macro_rules! println
 {
     () => ({
-        use kernel::print;
-        print!("\r\n")
+        use $crate::print;
+        print!("\n")
     });
     ($fmt:expr) => ({
-        use kernel::print;
-        print!(concat!($fmt, "\r\n"))
+        use $crate::print;
+        print!(concat!($fmt, "\n"))
     });
     ($fmt:expr, $($args:tt)+) => ({
-        use kernel::print;
-        print!(concat!($fmt, "\r\n"), $($args)+)
+        use $crate::print;
+        print!(concat!($fmt, "\n"), $($args)+)
     });
 }
