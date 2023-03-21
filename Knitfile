@@ -22,7 +22,7 @@ local O := s
 local riscv := -C code-model=medium
 
 local flags = {
-    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no
+    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -D warnings
     as := -march=rv64imac_zicsr_zifencei
     qemu := -nographic -no-reboot -bios none -machine virt
     rustfmt := --edition 2021
@@ -75,9 +75,9 @@ return b{
         $(tools.clippy) $(flags.rustc) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain --out-dir .obj
 
     $ format:VB:
-        $(tools.rustfmt) $(flags.rustfmt) --emit files $(src.kernel) $(src.kmain)
+        $(tools.rustfmt) $(flags.rustfmt) --emit files kernel/lib.rs kmain/lib.rs
     $ format-check:VB:
-        $(tools.rustfmt) $(flags.rustfmt) --check $(src.kernel) $(src.kmain)
+        $(tools.rustfmt) $(flags.rustfmt) --check kernel/lib.rs kmain/lib.rs
 
     $ doc:VB:
         $(tools.rustdoc) $(flags.rustdoc) kernel/lib.rs --crate-name kernel -o doc

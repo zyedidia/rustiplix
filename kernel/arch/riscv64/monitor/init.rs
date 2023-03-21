@@ -16,9 +16,11 @@ pub fn enter_smode() {
 
     // Configure the PMP to allow all accesses for S-mode. Uses a TOR region to allow R/W/X
     // starting at 0x0 and ending at 0xffff_ffff_ffff.
-    csr!(pmpcfg0 = 0b0_0_01_111);
+    csr!(pmpcfg0 = 0b0001111);
     csr!(pmpaddr0 = 0xffff_ffff_ffffu64);
 
     // Call asm function that performs actual transition.
-    unsafe { _enter_smode(); }
+    unsafe {
+        _enter_smode();
+    }
 }

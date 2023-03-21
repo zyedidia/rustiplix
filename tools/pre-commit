@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+knit format-check
+knit clippy
+knit
