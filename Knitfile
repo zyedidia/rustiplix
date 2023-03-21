@@ -10,6 +10,7 @@ local tools = {
     objcopy := $prefix-objcopy
     objdump := $prefix-objdump
     qemu := qemu-system-riscv64
+    gdb := gdb-multiarch
 }
 
 local O := s
@@ -38,7 +39,7 @@ local link = "link/virt.ld"
 
 return b{
     $ prog.elf: $(obj.asm) $(obj.kmain) $(obj.kernel) $(link)[I]
-        $(tools.ld) -T$(link) $input -o $output
+        $(tools.ld) -T$(link) $input /home/zyedidia/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/riscv64imac-unknown-none-elf/lib/libcore-6b8d3be6c3d1d4e7.rlib --gc-sections -o $output
 
     $ $(obj.kmain): $(src.kmain) $(obj.kernel)
         $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(obj.kernel) --out-dir .obj
@@ -53,4 +54,7 @@ return b{
         $(tools.objcopy) $input -O binary $output
     $ qemu:VB: prog.bin
         $(tools.qemu) -nographic -bios none -machine virt -kernel $input
+    $ qemu-gdb:VB: prog.elf
+        $(tools.qemu) -nographic -bios none -machine virt -kernel $input -s -S &
+        $(tools.gdb) -ex "file prog.elf" -ex "target remote localhost:1234"
 }

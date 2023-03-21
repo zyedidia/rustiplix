@@ -1,3 +1,5 @@
+use crate::dev::uart::Putc;
+
 #[repr(C)]
 pub struct DwApb {
     thr: u32,
@@ -13,7 +15,8 @@ impl DwApb {
     }
 }
 
-pub unsafe fn tx(b: u8) {
-    let thr = 0x10000000 as *mut u32;
-    thr.write_volatile(b as u32);
+impl Putc for DwApb {
+    fn putc(&mut self, c: u8) {
+        self.tx(c);
+    }
 }
