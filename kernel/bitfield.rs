@@ -1,3 +1,4 @@
+#[allow(unused_macros)]
 macro_rules! bitfield {
     ($field:ident: $ty:ty; $($get_name:ident, $set_name:ident: $hi:expr, $lo:expr);+ $(;)?) => {
         $(
