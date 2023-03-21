@@ -37,12 +37,12 @@ local src = {
 local obj = {
     kernel = {"libkernel.rlib"},
     kmain = {"libkmain.rlib"},
-    asm = knit.extrepl(knit.rglob(".", "*.s"), ".s", ".o"),
+    asm = knit.extrepl(knit.rglob(".", "*.s"), ".s", ".asm.o"),
 }
 
 obj.kernel = knit.prefix(obj.kernel, ".obj/")
 obj.kmain = knit.prefix(obj.kmain, ".obj/")
-obj.asm = knit.prefix(obj.asm, ".obj/asm/")
+obj.asm = knit.prefix(obj.asm, ".obj/")
 
 local link = "link/virt.ld"
 
@@ -58,7 +58,7 @@ return b{
     $ $(obj.kernel): $(src.kernel)
         $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --out-dir .obj
 
-    $ .obj/asm/%.o: %.s
+    $ .obj/%.asm.o: %.s
         $(tools.as) $(flags.as) $input -c -o $output
     $ %.list: %.elf
         $(tools.objdump) -D $input > $output
