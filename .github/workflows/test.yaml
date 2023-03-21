@@ -11,6 +11,8 @@ jobs:
         toolchain: stable
         components: rustfmt, clippy
 
+    - run: rustup target add riscv64imac-unknown-none-elf
+
     - uses: zyedidia/setup-knit@v1
 
     # set up gnu toolchain
