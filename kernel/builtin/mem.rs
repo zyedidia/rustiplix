@@ -1,3 +1,6 @@
+/// # Safety
+///
+/// Unsafe implementation of memset for the LLVM intrinsic.
 #[no_mangle]
 pub unsafe extern "C" fn memset(v: *mut u8, c: u8, n: usize) -> *mut u8 {
     let mut p = v;
@@ -5,9 +8,12 @@ pub unsafe extern "C" fn memset(v: *mut u8, c: u8, n: usize) -> *mut u8 {
         *p = c;
         p = p.add(1);
     }
-    return p;
+    p
 }
 
+/// # Safety
+///
+/// Unsafe implementation of memcpy for the LLVM intrinsic.
 #[no_mangle]
 pub unsafe extern "C" fn memcpy(dst: *mut u8, src: *const u8, mut n: usize) -> *mut u8 {
     let mut s = src;
@@ -19,5 +25,5 @@ pub unsafe extern "C" fn memcpy(dst: *mut u8, src: *const u8, mut n: usize) -> *
         s = s.add(1);
         d = d.add(1);
     }
-    return dst;
+    dst
 }
