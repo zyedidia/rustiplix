@@ -14,6 +14,7 @@ local tools = {
     gdb := gdb-multiarch
     clippy := clippy-driver
     rustfmt := rustfmt
+    rustdoc := rustdoc
 }
 
 local O := s
@@ -21,10 +22,11 @@ local O := s
 local riscv := -C code-model=medium
 
 local flags = {
-    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition=2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no
+    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no
     as := -march=rv64imac_zicsr_zifencei
     qemu := -nographic -no-reboot -bios none -machine virt
     rustfmt := --edition 2021
+    rustdoc := --target $target --edition 2021 --document-private-items
 }
 
 local src = {
@@ -76,6 +78,10 @@ return b{
         $(tools.rustfmt) $(flags.rustfmt) --emit files $(src.kernel) $(src.kmain)
     $ format-check:VB:
         $(tools.rustfmt) $(flags.rustfmt) --check $(src.kernel) $(src.kmain)
+
+    $ doc:VB:
+        $(tools.rustdoc) $(flags.rustdoc) kernel/lib.rs --crate-name kernel -o doc
+        $(tools.rustdoc) $(flags.rustdoc) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain -o doc
 
     $ rust-project.json:
         ./tools/rust-project.sh > $output
