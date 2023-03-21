@@ -1,11 +1,11 @@
-#[macro_export]
 macro_rules! csr {
     ($name:ident) => {{
         #[cfg(target_arch = "riscv64")]
         {
             let value: usize;
             unsafe {
-                llvm_asm!("csrr $0, $1" : "=r"(value) : "i"($name));
+                use ::core::arch::asm;
+                asm!(concat!("csrr ", "{}, ", stringify!($name)), out(reg) value);
             }
             value
         }
@@ -18,8 +18,10 @@ macro_rules! csr {
     ($name:ident = $val:expr) => {{
         #[cfg(target_arch = "riscv64")]
         {
+            let value = $val;
             unsafe {
-                llvm_asm!("csrw $0, $1" :: "i"($name), "r"($val));
+                use ::core::arch::asm;
+                asm!(concat!("csrw ", stringify!($name), ", {}"), in(reg) value);
             }
         }
         #[cfg(not(target_arch = "riscv64"))]
@@ -27,4 +29,10 @@ macro_rules! csr {
             panic!("This macro can only be used on RISC-V platforms");
         }
     }};
+}
+
+pub enum Priv {
+    U = 0b00,
+    S = 0b01,
+    M = 0b11,
 }
