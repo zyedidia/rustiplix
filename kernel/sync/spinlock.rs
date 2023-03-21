@@ -18,8 +18,7 @@ impl<T> SpinLock<T> {
     }
 
     pub fn lock(&self) -> Guard<T> {
-        while self.locked.swap(true, Acquire) {
-        }
+        while self.locked.swap(true, Acquire) {}
         Guard { lock: self }
     }
 }

@@ -13,6 +13,7 @@ local tools = {
     qemu := qemu-system-riscv64
     gdb := gdb-multiarch
     clippy := clippy-driver
+    rustfmt := rustfmt
 }
 
 local O := s
@@ -23,6 +24,7 @@ local flags = {
     rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition=2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no
     as := -march=rv64imac_zicsr_zifencei
     qemu := -nographic -no-reboot -bios none -machine virt
+    rustfmt := --edition 2021
 }
 
 local src = {
@@ -69,6 +71,11 @@ return b{
     $ clippy:VB:
         $(tools.clippy) $(flags.rustc) kernel/lib.rs --crate-name kernel --out-dir .obj
         $(tools.clippy) $(flags.rustc) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain --out-dir .obj
+
+    $ format:VB:
+        $(tools.rustfmt) $(flags.rustfmt) --emit files $(src.kernel) $(src.kmain)
+    $ format-check:VB:
+        $(tools.rustfmt) $(flags.rustfmt) --check $(src.kernel) $(src.kmain)
 
     $ rust-project.json:
         ./tools/rust-project.sh > $output
