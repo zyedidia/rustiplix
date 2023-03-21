@@ -1,4 +1,5 @@
 pub mod dwapb;
+pub mod virt;
 
 use core::fmt::{Error, Write};
 use core::marker::PhantomData;
@@ -17,7 +18,7 @@ impl<T: Putc> Uart<T> {
     pub const fn new(base: usize) -> Self {
         Uart {
             base,
-            x: PhantomData{},
+            x: PhantomData {},
         }
     }
 
@@ -26,7 +27,7 @@ impl<T: Putc> Uart<T> {
     }
 }
 
-impl <T: Putc> Putc for Uart<T> {
+impl<T: Putc> Putc for Uart<T> {
     fn putc(&mut self, c: u8) {
         let uart = self.device();
         uart.putc(c);
