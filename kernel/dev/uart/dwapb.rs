@@ -1,4 +1,4 @@
-use crate::bit::BitIndex;
+use crate::bit::Bit;
 use crate::dev::uart::Putc;
 
 #[repr(C)]

@@ -3,7 +3,10 @@
 
 #[macro_use]
 pub mod fmt;
+#[macro_use]
+pub mod bitfield;
 
+pub mod arch;
 pub mod bit;
 pub mod board;
 pub mod builtin;
