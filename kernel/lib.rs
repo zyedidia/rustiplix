@@ -12,3 +12,4 @@ pub mod board;
 pub mod builtin;
 pub mod dev;
 pub mod sync;
+pub mod vm;

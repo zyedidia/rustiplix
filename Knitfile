@@ -22,11 +22,12 @@ local O := s
 local riscv := -C code-model=medium
 
 local flags = {
-    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -D warnings
+    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables
     as := -march=rv64imac_zicsr_zifencei
     qemu := -nographic -no-reboot -bios none -machine virt
     rustfmt := --edition 2021
     rustdoc := --target $target --edition 2021 --document-private-items
+    clippy := -D warnings
 }
 
 local src = {
@@ -71,13 +72,15 @@ return b{
         $(tools.gdb) -ex "file $input" -ex "target remote localhost:1234"
 
     $ clippy:VB:
-        $(tools.clippy) $(flags.rustc) kernel/lib.rs --crate-name kernel --out-dir .obj
-        $(tools.clippy) $(flags.rustc) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain --out-dir .obj
+        $(tools.clippy) $(flags.rustc) $(flags.clippy) kernel/lib.rs --crate-name kernel --out-dir .obj
+        $(tools.clippy) $(flags.rustc) $(flags.clippy) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain --out-dir .obj
 
     $ format:VB:
         $(tools.rustfmt) $(flags.rustfmt) --emit files kernel/lib.rs kmain/lib.rs
     $ format-check:VB:
         $(tools.rustfmt) $(flags.rustfmt) --check kernel/lib.rs kmain/lib.rs
+
+    $ check:VB: format-check clippy
 
     $ doc:VB:
         $(tools.rustdoc) $(flags.rustdoc) kernel/lib.rs --crate-name kernel -o doc
