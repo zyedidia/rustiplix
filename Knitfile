@@ -27,7 +27,7 @@ local flags = {
     qemu := -nographic -no-reboot -bios none -machine virt
     rustfmt := --edition 2021
     rustdoc := --target $target --edition 2021 --document-private-items
-    clippy := -D warnings
+    clippy := -D warnings -A clippy::missing-safety-doc
     objdump := -j .text -j .data -j .rodata -j .bss -j .kstack -d
 }
 

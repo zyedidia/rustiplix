@@ -1,17 +1,16 @@
 use crate::cpu::Cpu;
 use core::arch::asm;
 
-pub fn rd_cpu() -> &'static Cpu {
+// Reads the CPU struct out of the thread-local pointer. Unsafe because interrupts must be
+// disabled.
+pub unsafe fn rd_cpu() -> &'static mut Cpu {
     let val: usize;
-    unsafe {
-        asm!("mv {}, tp", out(reg) val);
-        &*(val as *const Cpu)
-    }
+    asm!("mv {}, tp", out(reg) val);
+    &mut *(val as *mut Cpu)
 }
 
-/// # Safety
-///
-/// Writes a CPU struct into the core-local thread-pointer.
-pub unsafe fn wr_cpu(cpu: &Cpu) {
-    asm!("mv tp, {}", in(reg) cpu as *const _ as usize);
+// Writes a CPU struct into the core-local thread-pointer. Unsafe because interrupts must be
+// disabled.
+pub unsafe fn wr_cpu(cpu: &mut Cpu) {
+    asm!("mv tp, {}", in(reg) cpu as *mut _ as usize);
 }
