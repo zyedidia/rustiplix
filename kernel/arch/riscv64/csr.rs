@@ -36,3 +36,10 @@ pub enum Priv {
     S = 0b01,
     M = 0b11,
 }
+
+pub enum Sstatus {
+    Sie = 1,
+    Spie = 5,
+    Spp = 8,
+    Sum = 18,
+}

@@ -17,6 +17,8 @@ pub struct CpuGuard<'a> {
     was_en: bool,
 }
 
+use crate::arch::riscv64::cpu::rd_cpu;
+use crate::arch::riscv64::trap::irq;
 use core::ops::Deref;
 
 impl CpuGuard<'_> {
@@ -24,11 +26,14 @@ impl CpuGuard<'_> {
         // TODO:
         // * get current irqs status
         // * disable irqs
-        use crate::arch::riscv64::cpu::rd_cpu;
+        let was_en = irq::enabled();
+        unsafe {
+            irq::off();
+        }
         Self {
             // Safety: we know interrupts are disabled now.
             cpu: unsafe { rd_cpu() },
-            was_en: false,
+            was_en,
         }
     }
 }
@@ -49,7 +54,7 @@ impl Deref for CpuGuard<'_> {
 impl Drop for CpuGuard<'_> {
     fn drop(&mut self) {
         if self.was_en {
-            // TODO: re-enable irqs
+            unsafe { irq::on() }
         }
     }
 }
