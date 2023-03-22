@@ -1,6 +1,10 @@
 use crate::arch::riscv64::csr::Priv;
 use crate::bit::Bit;
 
+pub fn init() {
+    csr!(mcounteren = 0b111);
+}
+
 extern "C" {
     fn _enter_smode();
 }

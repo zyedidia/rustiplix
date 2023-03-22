@@ -5,7 +5,7 @@ extern "C" {
 }
 
 #[no_mangle]
-unsafe extern "C" fn start(coreid: u32, primary: bool) {
+unsafe extern "C" fn start(coreid: usize, primary: bool) {
     if primary {
         init_bss();
     }

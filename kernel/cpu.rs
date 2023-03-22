@@ -1,15 +1,22 @@
+use crate::arch::riscv64::cpu::rd_cpu;
+
 #[derive(Copy, Clone)]
 pub struct Cpu {
-    pub coreid: u32,
+    pub coreid: usize,
 }
 
 static mut CPUS: [Cpu; 4] = [Cpu { coreid: 0 }; 4];
 
 // Initializes the core-local CPU state for coreid (the current core).
-pub unsafe fn init_cpu(coreid: u32) {
+pub unsafe fn init_cpu(coreid: usize) {
     use crate::arch::riscv64::cpu::wr_cpu;
-    CPUS[coreid as usize].coreid = coreid;
-    wr_cpu(&mut CPUS[coreid as usize]);
+    CPUS[coreid].coreid = coreid;
+    wr_cpu(&mut CPUS[coreid]);
+}
+
+// Get the core-local CPU struct without any guard. Requires that interrupts are disabled.
+pub unsafe fn get_cpu() -> &'static Cpu {
+    rd_cpu()
 }
 
 pub struct CpuGuard<'a> {
@@ -17,7 +24,6 @@ pub struct CpuGuard<'a> {
     was_en: bool,
 }
 
-use crate::arch::riscv64::cpu::rd_cpu;
 use crate::arch::riscv64::trap::irq;
 use core::ops::Deref;
 
