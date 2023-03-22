@@ -28,6 +28,7 @@ local flags = {
     rustfmt := --edition 2021
     rustdoc := --target $target --edition 2021 --document-private-items
     clippy := -D warnings
+    objdump := -j .text -j .data -j .rodata -j .bss -j .kstack -d
 }
 
 local src = {
@@ -51,7 +52,7 @@ local libdir = knit.shell(f"rustc --print target-libdir --target $target")
 local libcore = knit.glob(f"$libdir/libcore*.rlib")
 
 return b{
-    $ kernel.elf: $(obj.asm) $(obj.kmain) $(obj.kernel) $(link)[I]
+    $ kernel.elf: $(obj.asm) $(obj.kernel) $(obj.kmain) $(link)[I]
         $(tools.cc) -Wl,-T$(link) -Wl,--gc-sections $input $libcore -o $output -nostdlib -nostdinc
 
     $ $(obj.kmain): $(src.kmain) $(obj.kernel)
@@ -62,7 +63,7 @@ return b{
     $ .obj/%.asm.o: %.s
         $(tools.as) $(flags.as) $input -c -o $output
     $ %.list: %.elf
-        $(tools.objdump) -D $input > $output
+        $(tools.objdump) $(flags.objdump) $input > $output
     $ %.bin: %.elf
         $(tools.objcopy) $input -O binary $output
     $ qemu:VB: kernel.bin

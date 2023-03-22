@@ -1,9 +1,16 @@
-use crate::kmain::kmain;
+use crate::cpu::init_cpu;
+
+extern "C" {
+    fn kmain();
+}
 
 #[no_mangle]
-extern "C" fn start(coreid: u32) {
-    unsafe { init_bss() };
-    kmain(coreid);
+unsafe extern "C" fn start(coreid: u32, primary: bool) {
+    if primary {
+        init_bss();
+    }
+    init_cpu(coreid);
+    kmain();
 }
 
 unsafe fn init_bss() {

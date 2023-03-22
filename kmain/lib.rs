@@ -4,4 +4,3 @@
 extern crate kernel;
 
 pub mod kmain;
-pub mod start;
