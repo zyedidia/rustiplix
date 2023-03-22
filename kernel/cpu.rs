@@ -29,9 +29,6 @@ use core::ops::Deref;
 
 impl CpuGuard<'_> {
     pub fn new() -> Self {
-        // TODO:
-        // * get current irqs status
-        // * disable irqs
         let was_en = irq::enabled();
         unsafe {
             irq::off();

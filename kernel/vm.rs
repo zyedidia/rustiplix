@@ -20,8 +20,8 @@ pub const fn ka2pa(ka: usize) -> usize {
 
 #[inline]
 pub const fn pa2ka(pa: usize) -> usize {
-    // In the future this function should be statically different at compile-time depending on
-    // whether the monitor or kernel is being compiled.
+    // TODO: In the future this function should be statically different at compile-time depending
+    // on whether the monitor or kernel is being compiled.
     pa + sys::HIGHMEM_BASE
 }
 
