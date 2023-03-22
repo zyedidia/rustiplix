@@ -15,7 +15,7 @@ pub unsafe fn init_cpu(coreid: usize) {
 }
 
 // Get the core-local CPU struct without any guard. Requires that interrupts are disabled.
-pub unsafe fn get_cpu() -> &'static Cpu {
+pub unsafe fn cpu() -> &'static Cpu {
     rd_cpu()
 }
 
