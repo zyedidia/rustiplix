@@ -13,6 +13,7 @@ pub mod board;
 pub mod builtin;
 pub mod cpu;
 pub mod dev;
+pub mod primary;
 pub mod start;
 pub mod sync;
 pub mod sys;

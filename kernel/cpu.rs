@@ -1,5 +1,23 @@
 use crate::arch::riscv64::cpu::rd_cpu;
 
+// A global that becomes true when the secondary cores boot up.
+static mut BOOTED_ALL: bool = false;
+
+// Safe because this will only be able to write to BOOTED_ALL if the secondary cores have not yet
+// booted.
+pub fn set_booted_all() {
+    unsafe {
+        assert!(!BOOTED_ALL);
+        BOOTED_ALL = true;
+    }
+}
+
+// Safe because if BOOTED_ALL is false, there is no possible race (only one core), and if
+// BOOTED_ALL is true, it is impossible for set_booted_all to write to the global.
+pub fn booted_all() -> bool {
+    unsafe { BOOTED_ALL }
+}
+
 #[derive(Copy, Clone)]
 pub struct Cpu {
     pub coreid: usize,
