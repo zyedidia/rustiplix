@@ -1,7 +1,9 @@
-use crate::arch::riscv64::csr::Priv;
+use crate::arch::riscv64::csr::{Priv, Sie, Sstatus};
+use crate::arch::riscv64::vm::Pagetable;
 use crate::bit::Bit;
+use crate::primary::PrimaryCell;
 
-pub fn init() {
+pub fn init_monitor() {
     csr!(mcounteren = 0b111);
 }
 
@@ -27,4 +29,33 @@ pub fn enter_smode() {
     unsafe {
         _enter_smode();
     }
+}
+
+static PAGETABLE: PrimaryCell<Pagetable> = PrimaryCell::new(Pagetable::new());
+
+pub fn init_kernel(primary: bool) {
+    use crate::arch::riscv64::vm::vm_fence;
+    use crate::vm::{pa2ka, perm};
+
+    if primary {
+        // If primary core, create mappings for the initial pagetable.
+        let map_giga = |pa: usize| unsafe {
+            let pt = PAGETABLE.get_mut();
+            pt.map_giga(pa, pa, perm::READ | perm::WRITE | perm::EXEC);
+            pt.map_giga(pa2ka(pa), pa, perm::READ | perm::WRITE | perm::EXEC);
+        };
+        map_giga(0x0000_0000);
+        map_giga(0x4000_0000);
+        map_giga(0x8000_0000);
+    }
+
+    // Enable virtual memory with an identity-mapped pagetable.
+    csr!(satp = PAGETABLE.satp());
+    vm_fence();
+
+    // Prepare to enable interrupts (will only be enabled when sstatus is written as well).
+    csr!(sie = (1 << Sie::Stie as usize) | (1 << Sie::Ssie as usize));
+
+    // Enable SUM bit so supervisor can access user-mode pages.
+    csr!(sstatus = csr!(sstatus) | (1 << Sstatus::Sum as usize))
 }

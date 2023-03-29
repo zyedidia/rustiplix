@@ -1,4 +1,4 @@
-use kernel::arch::riscv64::monitor::init::{enter_smode, init};
+use kernel::arch::riscv64::monitor::init::{enter_smode, init_kernel, init_monitor};
 use kernel::cpu::CpuGuard;
 use kernel::primary::PrimaryCell;
 use kernel::println;
@@ -7,8 +7,9 @@ static Y: PrimaryCell<i32> = PrimaryCell::new(42);
 
 #[no_mangle]
 pub extern "C" fn kmain() {
-    init();
+    init_monitor();
     enter_smode();
+    init_kernel(true);
 
     unsafe {
         let y = Y.get_mut();

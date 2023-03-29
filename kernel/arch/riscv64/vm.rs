@@ -1,4 +1,5 @@
 use crate::bit::Bit;
+use crate::sys;
 use crate::vm::perm;
 use core::arch::asm;
 
@@ -8,6 +9,9 @@ pub enum PtLevel {
     Giga = 2,
 }
 
+const SV39: usize = 8;
+
+#[derive(Copy, Clone)]
 pub struct Pte {
     data: u64,
 }
@@ -29,15 +33,19 @@ impl Pte {
         ppn2, set_ppn2: 53, 28;
     );
 
-    fn validate(&self) -> bool {
-        self.valid() == 1 && self.accessed() == 1 && self.dirty() == 1
+    fn validate(&mut self) {
+        self.set_valid(1);
+        self.set_accessed(1);
+        self.set_dirty(1);
     }
 
     pub fn pa(&self) -> usize {
         ((self.ppn0() << 12) | (self.ppn1() << 21) | (self.ppn2() << 30)) as usize
     }
 
-    pub fn set_pa(&mut self, pa: usize) {}
+    pub fn set_pa(&mut self, pa: usize) {
+        self.data = self.data.set_bits(53, 10, pa.bits(55, 12) as u64);
+    }
 
     // If this function is made public, it should also take an additional `level` parameter since
     // on other architectures determining if a PTE is a leaf requires knowing the level.
@@ -84,6 +92,12 @@ pub struct Pagetable {
 }
 
 impl Pagetable {
+    pub const fn new() -> Self {
+        Self {
+            ptes: [Pte { data: 0 }; 512],
+        }
+    }
+
     pub fn walk(&mut self, va: usize, endlevel: PtLevel) -> Option<&mut Pte> {
         None
     }
@@ -92,8 +106,12 @@ impl Pagetable {
         let vpn = vpn(PtLevel::Giga, va);
         self.ptes[vpn].set_perm(perm);
         self.ptes[vpn].set_pa(pa);
+        self.ptes[vpn].validate();
+    }
 
-        assert!(self.ptes[vpn].validate());
+    pub fn satp(&self) -> usize {
+        let pn = &self.ptes[0] as *const _ as usize / sys::PAGESIZE;
+        pn.set_bits(63, 60, SV39)
     }
 
     pub fn level2size(level: PtLevel) -> usize {

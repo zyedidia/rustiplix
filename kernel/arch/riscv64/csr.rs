@@ -43,3 +43,9 @@ pub enum Sstatus {
     Spp = 8,
     Sum = 18,
 }
+
+pub enum Sie {
+    Seie = 9,
+    Stie = 5,
+    Ssie = 1,
+}
