@@ -1,5 +1,5 @@
 use kernel::arch::riscv64::monitor::init::{enter_smode, init_kernel, init_monitor};
-use kernel::cpu::CpuGuard;
+use kernel::cpu::cpu;
 use kernel::primary::PrimaryCell;
 use kernel::println;
 
@@ -9,7 +9,7 @@ static Y: PrimaryCell<i32> = PrimaryCell::new(42);
 pub extern "C" fn kmain() {
     init_monitor();
     enter_smode();
-    init_kernel(true);
+    init_kernel(cpu().primary);
 
     unsafe {
         let y = Y.get_mut();
@@ -19,7 +19,7 @@ pub extern "C" fn kmain() {
 
     println!(
         "core: {}, entered kmain at: {:?}",
-        CpuGuard::new().coreid,
+        cpu().coreid,
         &kmain as *const _
     );
 

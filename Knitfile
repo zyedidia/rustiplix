@@ -22,7 +22,7 @@ local O := s
 local riscv := -C code-model=medium
 
 local flags = {
-    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables
+    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables -g
     as := -march=rv64imac_zicsr_zifencei
     qemu := -nographic -no-reboot -bios none -machine virt
     rustfmt := --edition 2021

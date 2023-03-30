@@ -9,7 +9,7 @@ unsafe extern "C" fn start(coreid: usize, primary: bool) {
     if primary {
         init_bss();
     }
-    init_cpu(coreid);
+    init_cpu(coreid, primary);
     kmain();
 }
 

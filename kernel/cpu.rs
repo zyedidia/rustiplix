@@ -1,4 +1,5 @@
 use crate::arch::riscv64::cpu::rd_cpu;
+use crate::board::virt;
 
 // A global that becomes true when the secondary cores boot up.
 static mut BOOTED_ALL: bool = false;
@@ -21,20 +22,29 @@ pub fn booted_all() -> bool {
 #[derive(Copy, Clone)]
 pub struct Cpu {
     pub coreid: usize,
+    pub primary: bool,
 }
 
-static mut CPUS: [Cpu; 4] = [Cpu { coreid: 0 }; 4];
+static mut CPUS: [Cpu; virt::machine::NCORES] = [Cpu {
+    coreid: 0,
+    primary: false,
+}; virt::machine::NCORES];
 
 // Initializes the core-local CPU state for coreid (the current core).
-pub unsafe fn init_cpu(coreid: usize) {
+pub unsafe fn init_cpu(coreid: usize, primary: bool) {
     use crate::arch::riscv64::cpu::wr_cpu;
     CPUS[coreid].coreid = coreid;
+    CPUS[coreid].primary = primary;
     wr_cpu(&mut CPUS[coreid]);
 }
 
 // Get the core-local CPU struct without any guard. Requires that interrupts are disabled.
-pub unsafe fn cpu() -> &'static Cpu {
+pub unsafe fn cpu_noguard<'a>() -> &'a Cpu {
     rd_cpu()
+}
+
+pub fn cpu<'a>() -> CpuGuard<'a> {
+    CpuGuard::new()
 }
 
 pub struct CpuGuard<'a> {
