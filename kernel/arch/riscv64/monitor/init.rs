@@ -1,7 +1,9 @@
 use crate::arch::riscv64::csr::{Priv, Sie, Sstatus};
 use crate::arch::riscv64::vm::Pagetable;
 use crate::bit::Bit;
+use crate::board::virt::machine;
 use crate::primary::PrimaryCell;
+use crate::sys;
 
 pub fn init_monitor() {
     csr!(mcounteren = 0b111);
@@ -44,9 +46,12 @@ pub fn init_kernel(primary: bool) {
             pt.map_giga(pa, pa, perm::READ | perm::WRITE | perm::EXEC);
             pt.map_giga(pa2ka(pa), pa, perm::READ | perm::WRITE | perm::EXEC);
         };
-        map_giga(0x0000_0000);
-        map_giga(0x4000_0000);
-        map_giga(0x8000_0000);
+
+        for mem in machine::MEM_RANGES {
+            for pa in (mem.start..mem.start + mem.size).step_by(sys::gb(1) as usize) {
+                map_giga(pa);
+            }
+        }
     }
 
     // Enable virtual memory with an identity-mapped pagetable.

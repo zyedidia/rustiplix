@@ -20,12 +20,12 @@ pub mod machine {
         pub size: usize,
     }
 
-    const MAIN_MEMORY: MemRange = MemRange {
+    pub const MAIN_MEMORY: MemRange = MemRange {
         start: 0x8000_0000,
         size: sys::gb(2) as usize,
     };
 
-    const MEM_RANGES: [MemRange; 2] = [
+    pub const MEM_RANGES: [MemRange; 2] = [
         MemRange {
             start: 0,
             size: sys::gb(2) as usize,
