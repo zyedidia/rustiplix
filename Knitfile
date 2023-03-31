@@ -24,7 +24,7 @@ local riscv := -C code-model=medium
 local flags = {
     rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables -g
     as := -march=rv64imac_zicsr_zifencei -xassembler-with-cpp -mcmodel=medany -mabi=lp64
-    qemu := -nographic -no-reboot -bios none -machine virt
+    qemu := -nographic -no-reboot -bios none -machine virt -m 2G
     rustfmt := --edition 2021
     rustdoc := --target $target --edition 2021 --document-private-items
     clippy := -D warnings -A clippy::missing-safety-doc
