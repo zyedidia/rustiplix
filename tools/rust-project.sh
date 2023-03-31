@@ -20,7 +20,7 @@ cat << EOM
                     "name": "kernel"
                 }
             ]
-        }
+        },
         {
             "display_name": "kmain",
             "root_module": "kmain/lib.rs",

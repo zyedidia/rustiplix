@@ -9,6 +9,6 @@
 
 rust-project.json
 
-doc
+doc/generated
 
 /tools/plboot/plboot
