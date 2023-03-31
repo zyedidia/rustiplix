@@ -23,4 +23,9 @@ pub extern "C" fn kmain() {
         cpu().coreid,
         &kmain as *const _
     );
+
+    unsafe {
+        use core::arch::asm;
+        asm!("ecall");
+    }
 }

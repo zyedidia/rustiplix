@@ -3,6 +3,7 @@ pub mod csr;
 
 pub mod cpu;
 pub mod monitor;
+pub mod regs;
 pub mod timer;
 pub mod trap;
 pub mod vm;

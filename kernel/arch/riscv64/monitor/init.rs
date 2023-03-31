@@ -1,16 +1,46 @@
 use crate::arch::riscv64::csr::{Priv, Sie, Sstatus};
+use crate::arch::riscv64::regs::{rd_gp, rd_tp};
 use crate::arch::riscv64::vm::Pagetable;
 use crate::bit::Bit;
 use crate::board::virt::machine;
+use crate::cpu::cpu_noguard;
 use crate::primary::PrimaryCell;
 use crate::sys;
 
-pub fn init_monitor() {
-    csr!(mcounteren = 0b111);
-}
-
 extern "C" {
     fn _enter_smode();
+    fn monitorvec();
+}
+
+#[derive(Copy, Clone)]
+struct ScratchFrame {
+    sp: usize,
+    tp: usize,
+    gp: usize,
+    trap_sp: usize,
+}
+
+static mut FRAMES: [ScratchFrame; machine::NCORES] = [ScratchFrame {
+    sp: 0,
+    tp: 0,
+    gp: 0,
+    trap_sp: 0,
+}; machine::NCORES];
+
+pub fn init_monitor() {
+    csr!(mtvec = monitorvec as usize);
+    csr!(mcounteren = 0b111);
+
+    unsafe {
+        let cpu = cpu_noguard();
+        FRAMES[cpu.coreid] = ScratchFrame {
+            sp: cpu.stack,
+            tp: rd_tp() as usize,
+            gp: rd_gp() as usize,
+            trap_sp: 0,
+        };
+        csr!(mscratch = &FRAMES[cpu.coreid] as *const _ as usize);
+    }
 }
 
 pub fn enter_smode() {

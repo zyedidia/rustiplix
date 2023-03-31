@@ -3,6 +3,7 @@ macro_rules! csr {
         #[cfg(target_arch = "riscv64")]
         {
             let value: usize;
+            #[allow(unused_unsafe)]
             unsafe {
                 use ::core::arch::asm;
                 asm!(concat!("csrr ", "{}, ", stringify!($name)), out(reg) value);
@@ -19,6 +20,7 @@ macro_rules! csr {
         #[cfg(target_arch = "riscv64")]
         {
             let value = $val;
+            #[allow(unused_unsafe)]
             unsafe {
                 use ::core::arch::asm;
                 asm!(concat!("csrw ", stringify!($name), ", {}"), in(reg) value);

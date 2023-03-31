@@ -23,18 +23,25 @@ pub fn booted_all() -> bool {
 pub struct Cpu {
     pub coreid: usize,
     pub primary: bool,
+    pub stack: usize,
 }
 
 static mut CPUS: [Cpu; virt::machine::NCORES] = [Cpu {
     coreid: 0,
     primary: false,
+    stack: 0,
 }; virt::machine::NCORES];
 
 // Initializes the core-local CPU state for coreid (the current core).
 pub unsafe fn init_cpu(coreid: usize, primary: bool) {
+    extern "C" {
+        static _stack_start: u8;
+    }
+
     use crate::arch::riscv64::cpu::wr_cpu;
     CPUS[coreid].coreid = coreid;
     CPUS[coreid].primary = primary;
+    CPUS[coreid].stack = (&_stack_start as *const _ as usize) + (coreid + 1) * 4096;
     wr_cpu(&mut CPUS[coreid]);
 }
 

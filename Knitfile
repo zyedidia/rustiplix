@@ -93,9 +93,9 @@ return b{
         $(tools.objcopy) $input -O binary $output
     $ qemu:VB: kernel.boot.bin
         $(tools.qemu) $(flags.qemu) -kernel $input
-    $ qemu-gdb:VB: kernel.boot.elf
-        $(tools.qemu) $(flags.qemu) -kernel $input -s -S &
-        $(tools.gdb) -ex "file $input" -ex "target remote localhost:1234"
+    $ qemu-gdb:VB: kernel.boot.elf kernel.elf
+        $(tools.qemu) $(flags.qemu) -kernel $(inputs[1]) -s -S &
+        $(tools.gdb) -ex "file $(inputs[2])" -ex "target remote localhost:1234"
 
     $ clippy:VB:
         $(tools.clippy) $(flags.rustc) $(flags.clippy) kernel/lib.rs --crate-name kernel --out-dir .obj
