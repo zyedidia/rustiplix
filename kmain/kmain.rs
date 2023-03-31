@@ -1,30 +1,11 @@
-use kernel::arch::riscv64::monitor::init::{enter_smode, init_kernel, init_monitor};
 use kernel::cpu::cpu;
-use kernel::primary::PrimaryCell;
 use kernel::println;
-
-static Y: PrimaryCell<i32> = PrimaryCell::new(42);
 
 #[no_mangle]
 pub extern "C" fn kmain() {
-    init_monitor();
-    enter_smode();
-    init_kernel(cpu().primary);
-
-    unsafe {
-        let y = Y.get_mut();
-        *y = 12;
-    }
-    println!("{}", *Y);
-
     println!(
         "core: {}, entered kmain at: {:?}",
         cpu().coreid,
         &kmain as *const _
     );
-
-    println!("waiting...");
-    use kernel::timer;
-    timer::delay_cycles(1000000000);
-    println!("done");
 }

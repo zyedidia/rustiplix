@@ -11,6 +11,17 @@ cat << EOM
             "deps": []
         },
         {
+            "display_name": "bootloader",
+            "root_module": "bootloader/lib.rs",
+            "edition": "2021",
+            "deps": [
+                {
+                    "crate": 0,
+                    "name": "kernel"
+                }
+            ]
+        }
+        {
             "display_name": "kmain",
             "root_module": "kmain/lib.rs",
             "edition": "2021",
