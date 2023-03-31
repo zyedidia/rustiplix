@@ -32,7 +32,7 @@ SECTIONS
     .stack : {
         . = ALIGN(16);
         _stack_start = .;
-        . += 4K;
+        . += 16K; /* enough for 4 cores */
     }
 
     .payload : {

@@ -1,24 +1,26 @@
 use kernel::cpu::cpu;
 use kernel::println;
 use kernel::sys::ALLOCATOR;
-use kernel::vm;
+
+fn heap_start() -> *mut u8 {
+    unsafe {
+        extern "C" {
+            static mut _heap_start: u8;
+        }
+        &mut _heap_start as *mut u8
+    }
+}
 
 #[no_mangle]
 pub extern "C" fn kmain() {
+    if cpu().primary {
+        let mut a = ALLOCATOR.lock();
+        a.init(heap_start(), 4096 * 16);
+    }
+
     println!(
         "core: {}, entered kmain at: {:?}",
         cpu().coreid,
         &kmain as *const _
     );
-
-    let mut a = ALLOCATOR.lock();
-    a.init(vm::pa2ka(0x9000_0000) as *mut u8, 4096 * 16);
-    let x = a.alloc(4096);
-    println!("allocated: {:p}", x);
-    a.dealloc(x);
-    println!("allocated: {:p}", a.alloc(4096));
-    println!("allocated: {:p}", a.alloc(4096));
-    println!("allocated: {:p}", a.alloc(4096));
-    println!("allocated: {:p}", a.alloc(4096));
-    println!("allocated: {:p}", a.alloc(4096));
 }
