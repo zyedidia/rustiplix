@@ -12,3 +12,5 @@ rust-project.json
 doc/generated
 
 /tools/plboot/plboot
+
+todo.txt

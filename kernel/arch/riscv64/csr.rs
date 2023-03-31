@@ -51,3 +51,19 @@ pub enum Sie {
     Stie = 5,
     Ssie = 1,
 }
+
+pub mod cause {
+    // interrupts
+    // software timer interrupt
+    pub const STI: usize = 0x8000000000000005;
+    // machine timer interrupt
+    pub const MTI: usize = 0x8000000000000007;
+
+    // exceptions
+    pub const ILLEGAL: usize = 2;
+    pub const BREAKPOINT: usize = 3;
+    pub const ECALL_U: usize = 8;
+    pub const ECALL_S: usize = 9;
+    pub const ECALL_M: usize = 11;
+    pub const WPGFLT: usize = 15;
+}

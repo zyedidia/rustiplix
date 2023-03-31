@@ -2,6 +2,7 @@
 pub mod csr;
 
 pub mod cpu;
+pub mod fwi;
 pub mod monitor;
 pub mod regs;
 pub mod timer;

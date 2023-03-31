@@ -1,3 +1,4 @@
+use kernel::arch::riscv64::fwi::wake_cores;
 use kernel::cpu::cpu;
 use kernel::println;
 use kernel::sys::ALLOCATOR;
@@ -16,6 +17,7 @@ pub extern "C" fn kmain() {
     if cpu().primary {
         let mut a = ALLOCATOR.lock();
         a.init(heap_start(), 4096 * 16);
+        wake_cores();
     }
 
     println!(
@@ -23,9 +25,4 @@ pub extern "C" fn kmain() {
         cpu().coreid,
         &kmain as *const _
     );
-
-    unsafe {
-        use core::arch::asm;
-        asm!("ecall");
-    }
 }
