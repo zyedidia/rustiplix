@@ -16,7 +16,7 @@ fn heap_start() -> *mut u8 {
 pub extern "C" fn kmain() {
     if cpu().primary {
         let mut a = ALLOCATOR.lock();
-        a.init(heap_start(), 4096 * 16);
+        unsafe { a.init(heap_start(), 4096 * 16) };
         wake_cores();
     }
 
@@ -25,4 +25,8 @@ pub extern "C" fn kmain() {
         cpu().coreid,
         &kmain as *const _
     );
+
+    // use alloc::boxed::Box;
+    // let x = Box::new(1);
+    // println!("{}", x);
 }

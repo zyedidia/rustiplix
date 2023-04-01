@@ -1,4 +1,4 @@
-use crate::alloc::pg::PageAlloc;
+use crate::kalloc::pg::PageAlloc;
 use crate::sync::spinlock::SpinLock;
 
 pub const fn gb(n: u64) -> u64 {

@@ -22,7 +22,7 @@ local O := s
 local riscv := -C code-model=medium
 
 local flags = {
-    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables -g
+    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type staticlib,lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables -g
     as := -march=rv64imac_zicsr_zifencei -xassembler-with-cpp -mcmodel=medany -mabi=lp64
     qemu := -nographic -no-reboot -bios none -machine virt -m 2G -smp 4
     rustfmt := --edition 2021
@@ -61,7 +61,12 @@ local link = {
 }
 
 local libdir = knit.shell(f"rustc --print target-libdir --target $target")
-local libcore = knit.glob(f"$libdir/libcore*.rlib")
+local liballoc = knit.glob(f"$libdir/liballoc*.rlib")
+local librust = knit.join(
+    knit.glob(f"$libdir/libcore*.rlib"),
+    knit.glob(f"$libdir/libcompiler_builtins*.rlib"),
+    liballoc
+)
 
 local plboot = {
     bin = "tools/plboot/plboot",
@@ -70,18 +75,18 @@ local plboot = {
 
 return b{
     $ kernel.boot.elf: $(obj.asm.kernel) $(obj.asm.bootloader) $(obj.kernel) $(obj.bootloader) $(link.bootloader)[I]
-        $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input $libcore -o $output -nostdlib -nostdinc
+        $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input $librust -o $output -nostdlib -nostdinc
     $ kernel.elf: $(obj.asm.kernel) $(obj.asm.kmain) $(obj.kernel) $(obj.kmain) $(link.kernel)[I]
-        $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input $libcore -o $output -nostdlib -nostdinc
+        $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input $librust -o $output -nostdlib -nostdinc
     $ %.payload: %.elf $(plboot.bin)[I]
         ./$(plboot.bin) make -o $output $input
 
     $ $(obj.kmain): $(src.kmain) $(obj.kernel)
-        $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(obj.kernel) --out-dir .obj
+        $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(obj.kernel) --extern alloc=$liballoc --out-dir .obj
     $ $(obj.bootloader): $(src.bootloader) $(obj.kernel)
         $(tools.rustc) $(flags.rustc) bootloader/lib.rs --crate-name bootloader --extern kernel=$(obj.kernel) --out-dir .obj
     $ $(obj.kernel): $(src.kernel)
-        $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --out-dir .obj
+        $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --extern alloc=$liballoc --out-dir .obj
 
     $ .obj/%.asm.o: %.s
         $(tools.cc) $(flags.as) $input -c -o $output

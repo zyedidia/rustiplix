@@ -34,17 +34,14 @@ impl PageAlloc {
         }
     }
 
-    // Workaround for the clippy bug.
-    #[allow(clippy::not_unsafe_ptr_arg_deref)]
-    pub fn init(&mut self, start: *mut u8, size: usize) {
+    pub unsafe fn init(&mut self, start: *mut u8, size: usize) {
         assert!(size != 0 && size % sys::PAGESIZE == 0);
         assert!(!start.is_null() && start as usize % 16 == 0);
         self.start = start;
-        // According to clippy, this might dereference a raw pointer. Clippy bug?
-        self.end = unsafe { start.add(size) };
+        self.end = start.add(size);
     }
 
-    pub fn alloc(&mut self, size: usize) -> *mut u8 {
+    fn alloc(&mut self, size: usize) -> *mut u8 {
         assert!(!self.start.is_null());
         assert!(size > 0 && size % sys::PAGESIZE == 0);
 
@@ -86,10 +83,12 @@ impl PageAlloc {
         }
     }
 
-    pub fn dealloc(&mut self, ptr: *mut u8) {
+    fn dealloc(&mut self, ptr: *mut u8) {
         if ptr.is_null() {
             return;
         }
+
+        assert!(!self.start.is_null());
 
         unsafe {
             let bp = (ptr as *mut Header).sub(1);

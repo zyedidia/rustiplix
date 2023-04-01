@@ -1,18 +1,19 @@
 #![no_std]
 #![no_main]
+#![feature(alloc_error_handler)]
 
 #[macro_use]
 pub mod fmt;
 #[macro_use]
 pub mod bitfield;
 
-pub mod alloc;
 pub mod arch;
 pub mod bit;
 pub mod board;
 pub mod builtin;
 pub mod cpu;
 pub mod dev;
+pub mod kalloc;
 pub mod primary;
 pub mod start;
 pub mod sync;
