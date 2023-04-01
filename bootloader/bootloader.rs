@@ -26,7 +26,7 @@ fn unpack() -> BootData {
         let length = payload.size as usize;
 
         BootData {
-            entry: entry,
+            entry,
             data: slice::from_raw_parts(&payload.data as *const u8, length),
         }
     }
@@ -42,14 +42,19 @@ pub extern "C" fn kmain() {
 
     init_kernel(primary);
 
-    let boot = unpack();
-    assert!(boot.data.len() > 0);
+    let boot = if primary {
+        let boot = unpack();
+        assert!(boot.data.len() > 0);
 
-    for i in (0..boot.data.len()).rev() {
-        unsafe {
-            boot.entry.add(i).write_volatile(boot.data[i]);
+        for i in (0..boot.data.len()).rev() {
+            unsafe {
+                boot.entry.add(i).write_volatile(boot.data[i]);
+            }
         }
-    }
+        boot
+    } else {
+        unpack()
+    };
 
     let entry = boot.entry as *const ();
     let func: extern "C" fn(coreid: usize) -> ! = unsafe { core::mem::transmute(entry) };

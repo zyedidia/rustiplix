@@ -1,5 +1,4 @@
 pub mod alloc;
-pub mod mem;
 pub mod panic;
 
 use core::arch::asm;

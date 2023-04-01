@@ -1,5 +1,6 @@
 use crate::sys;
 
+use crate::kalloc::global::Alloc;
 use core::mem::size_of;
 
 // This is a simple page allocator. It is horribly space-inefficient because it allocates twice as
@@ -41,6 +42,36 @@ impl PageAlloc {
         self.end = start.add(size);
     }
 
+    fn sbrk(&mut self, incr: usize) -> *mut u8 {
+        if self.start >= self.end {
+            return core::ptr::null_mut();
+        }
+        let p = self.start;
+        self.start = unsafe { self.start.add(incr) };
+        p
+    }
+
+    const NALLOC: usize = 1024;
+    fn morecore(&mut self, nu: usize) -> *mut Header {
+        let mut nu = nu;
+        if nu < Self::NALLOC {
+            nu = Self::NALLOC;
+        }
+
+        let up = self.sbrk(nu * size_of::<Header>()) as *mut Header;
+        if up.is_null() {
+            return core::ptr::null_mut();
+        }
+
+        unsafe {
+            (*up).size = nu;
+            self.dealloc(up.add(1) as *mut u8);
+        }
+        self.freep
+    }
+}
+
+impl Alloc for PageAlloc {
     fn alloc(&mut self, size: usize) -> *mut u8 {
         assert!(!self.start.is_null());
         assert!(size > 0 && size % sys::PAGESIZE == 0);
@@ -114,33 +145,5 @@ impl PageAlloc {
             }
             self.freep = p;
         }
-    }
-
-    fn sbrk(&mut self, incr: usize) -> *mut u8 {
-        if self.start >= self.end {
-            return core::ptr::null_mut();
-        }
-        let p = self.start;
-        self.start = unsafe { self.start.add(incr) };
-        p
-    }
-
-    const NALLOC: usize = 1024;
-    fn morecore(&mut self, nu: usize) -> *mut Header {
-        let mut nu = nu;
-        if nu < Self::NALLOC {
-            nu = Self::NALLOC;
-        }
-
-        let up = self.sbrk(nu * size_of::<Header>()) as *mut Header;
-        if up.is_null() {
-            return core::ptr::null_mut();
-        }
-
-        unsafe {
-            (*up).size = nu;
-            self.dealloc(up.add(1) as *mut u8);
-        }
-        self.freep
     }
 }

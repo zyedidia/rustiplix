@@ -1,13 +1,17 @@
 use crate::sync::spinlock::SpinLock;
 
 use alloc::alloc::{GlobalAlloc, Layout};
-use core::ptr::null_mut;
 
-pub struct KernelAlloc<T> {
+pub trait Alloc {
+    fn alloc(&mut self, size: usize) -> *mut u8;
+    fn dealloc(&mut self, ptr: *mut u8);
+}
+
+pub struct KernelAlloc<T: Alloc> {
     internal: SpinLock<T>,
 }
 
-impl<T> KernelAlloc<T> {
+impl<T: Alloc> KernelAlloc<T> {
     pub const fn new(val: T) -> Self {
         Self {
             internal: SpinLock::new(val),
@@ -15,13 +19,13 @@ impl<T> KernelAlloc<T> {
     }
 }
 
-unsafe impl<T> GlobalAlloc for KernelAlloc<T> {
-    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
-        null_mut()
+unsafe impl<T: Alloc> GlobalAlloc for KernelAlloc<T> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        self.internal.lock().alloc(layout.size())
     }
 
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        panic!("todo");
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        self.internal.lock().dealloc(ptr);
     }
 }
 
