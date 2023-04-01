@@ -3,4 +3,6 @@
 #![macro_use]
 extern crate kernel;
 
+extern crate alloc;
+
 pub mod kmain;

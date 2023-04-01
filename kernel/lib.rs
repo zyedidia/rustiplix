@@ -2,6 +2,8 @@
 #![no_main]
 #![feature(alloc_error_handler)]
 
+pub extern crate alloc;
+
 #[macro_use]
 pub mod fmt;
 #[macro_use]
