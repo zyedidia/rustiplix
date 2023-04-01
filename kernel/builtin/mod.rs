@@ -1,4 +1,3 @@
-pub mod alloc;
 pub mod panic;
 
 use core::arch::asm;

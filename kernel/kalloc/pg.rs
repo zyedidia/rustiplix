@@ -36,15 +36,16 @@ impl PageAlloc {
     }
 
     fn sbrk(&mut self, incr: usize) -> *mut u8 {
-        if self.start >= self.end {
+        let start = unsafe { self.start.add(incr) };
+        if start > self.end {
             return core::ptr::null_mut();
         }
         let p = self.start;
-        self.start = unsafe { self.start.add(incr) };
+        self.start = start;
         p
     }
 
-    const NALLOC: usize = 1024;
+    const NALLOC: usize = 1;
     fn morecore(&mut self, nu: usize) -> *mut Header {
         let mut nu = nu;
         if nu < Self::NALLOC {
