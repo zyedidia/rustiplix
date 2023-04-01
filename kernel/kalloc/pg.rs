@@ -35,13 +35,6 @@ impl PageAlloc {
         }
     }
 
-    pub unsafe fn init(&mut self, start: *mut u8, size: usize) {
-        assert!(size != 0 && size % sys::PAGESIZE == 0);
-        assert!(!start.is_null() && start as usize % 16 == 0);
-        self.start = start;
-        self.end = start.add(size);
-    }
-
     fn sbrk(&mut self, incr: usize) -> *mut u8 {
         if self.start >= self.end {
             return core::ptr::null_mut();
@@ -72,9 +65,16 @@ impl PageAlloc {
 }
 
 impl Alloc for PageAlloc {
+    unsafe fn init(&mut self, start: *mut u8, size: usize) {
+        assert!(size != 0 && size % sys::PAGESIZE == 0);
+        assert!(!start.is_null() && start as usize % 16 == 0);
+        self.start = start;
+        self.end = unsafe { start.add(size) };
+    }
+
     fn alloc(&mut self, size: usize) -> *mut u8 {
         assert!(!self.start.is_null());
-        assert!(size > 0 && size % sys::PAGESIZE == 0);
+        assert!(size > 0);
 
         let nunits = (size + size_of::<Header>() - 1) / size_of::<Header>() + 1;
         let mut prevp = self.freep;

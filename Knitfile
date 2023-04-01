@@ -37,10 +37,16 @@ local src = {
     bootloader = knit.rglob("bootloader", "*.rs"),
 }
 
-local obj = {
+local rlib = {
     kernel = {"libkernel.rlib"},
     kmain = {"libkmain.rlib"},
     bootloader = {"libbootloader.rlib"},
+}
+
+local obj = {
+    kernel = {"libkernel.a"},
+    kmain = {"libkmain.a"},
+    bootloader = {"libbootloader.a"},
     asm = {
         kernel = knit.extrepl(knit.rglob("kernel", "*.s"), ".s", ".asm.o"),
         kmain = knit.extrepl(knit.rglob("kmain", "*.s"), ".s", ".asm.o"),
@@ -48,6 +54,9 @@ local obj = {
     }
 }
 
+rlib.kernel = knit.prefix(rlib.kernel, ".obj/")
+rlib.kmain = knit.prefix(rlib.kmain, ".obj/")
+rlib.bootloader = knit.prefix(rlib.bootloader, ".obj/")
 obj.kernel = knit.prefix(obj.kernel, ".obj/")
 obj.kmain = knit.prefix(obj.kmain, ".obj/")
 obj.bootloader = knit.prefix(obj.bootloader, ".obj/")
@@ -81,11 +90,11 @@ return b{
     $ %.payload: %.elf $(plboot.bin)[I]
         ./$(plboot.bin) make -o $output $input
 
-    $ $(obj.kmain): $(src.kmain) $(obj.kernel)
-        $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(obj.kernel) --extern alloc=$liballoc --out-dir .obj
-    $ $(obj.bootloader): $(src.bootloader) $(obj.kernel)
-        $(tools.rustc) $(flags.rustc) bootloader/lib.rs --crate-name bootloader --extern kernel=$(obj.kernel) --out-dir .obj
-    $ $(obj.kernel): $(src.kernel)
+    $ $(obj.kmain) $(rlib.kmain): $(src.kmain) $(rlib.kernel)
+        $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(rlib.kernel) --extern alloc=$liballoc --out-dir .obj
+    $ $(obj.bootloader) $(rlib.bootloader): $(src.bootloader) $(rlib.kernel)
+        $(tools.rustc) $(flags.rustc) bootloader/lib.rs --crate-name bootloader --extern kernel=$(rlib.kernel) --out-dir .obj
+    $ $(obj.kernel) $(rlib.kernel): $(src.kernel)
         $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --extern alloc=$liballoc --out-dir .obj
 
     $ .obj/%.asm.o: %.s
@@ -104,7 +113,7 @@ return b{
 
     $ clippy:VB:
         $(tools.clippy) $(flags.rustc) $(flags.clippy) kernel/lib.rs --crate-name kernel --out-dir .obj
-        $(tools.clippy) $(flags.rustc) $(flags.clippy) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain --out-dir .obj
+        $(tools.clippy) $(flags.rustc) $(flags.clippy) kmain/lib.rs --extern kernel=$(rlib.kernel) --crate-name kmain --out-dir .obj
 
     $ format:VB:
         $(tools.rustfmt) $(flags.rustfmt) --emit files kernel/lib.rs kmain/lib.rs
@@ -115,7 +124,7 @@ return b{
 
     $ doc/generated:B:
         $(tools.rustdoc) $(flags.rustdoc) kernel/lib.rs --crate-name kernel -o $output
-        $(tools.rustdoc) $(flags.rustdoc) kmain/lib.rs --extern kernel=$(obj.kernel) --crate-name kmain -o $output
+        $(tools.rustdoc) $(flags.rustdoc) kmain/lib.rs --extern kernel=$(rlib.kernel) --crate-name kmain -o $output
 
     $ rust-project.json: ./tools/rust-project.sh
         ./tools/rust-project.sh > $output

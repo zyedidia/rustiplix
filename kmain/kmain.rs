@@ -1,7 +1,9 @@
 use kernel::arch::riscv64::fwi::wake_cores;
 use kernel::cpu::cpu;
+use kernel::kalloc::global::init_alloc;
 use kernel::println;
-use kernel::sys::ALLOCATOR;
+
+use alloc::boxed::Box;
 
 fn heap_start() -> *mut u8 {
     unsafe {
@@ -15,8 +17,7 @@ fn heap_start() -> *mut u8 {
 #[no_mangle]
 pub extern "C" fn kmain() {
     if cpu().primary {
-        let mut a = ALLOCATOR.lock();
-        unsafe { a.init(heap_start(), 4096 * 16) };
+        unsafe { init_alloc(heap_start(), 4096 * 50) };
         wake_cores();
     }
 
@@ -26,7 +27,12 @@ pub extern "C" fn kmain() {
         &kmain as *const _
     );
 
-    // use alloc::boxed::Box;
-    // let x = Box::new(1);
-    // println!("{}", x);
+    if !cpu().primary {
+        return;
+    }
+
+    let x = Box::new([0u64; 4096]);
+    let y = Box::new(1);
+    let z = Box::new(1);
+    println!("{:p} {:p} {:p}", x, y, z);
 }
