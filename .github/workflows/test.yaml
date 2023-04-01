@@ -11,6 +11,8 @@ jobs:
         toolchain: nightly
         components: rustfmt, clippy
 
+    - run: rustup default nightly
+
     - run: rustup target add riscv64imac-unknown-none-elf
 
     - uses: zyedidia/setup-knit@v1
