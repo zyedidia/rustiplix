@@ -56,6 +56,8 @@ pub extern "C" fn kmain() {
         unpack()
     };
 
+    kernel::sync::fence::insn_fence();
+
     let entry = boot.entry as *const ();
     let func: extern "C" fn(coreid: usize) -> ! = unsafe { core::mem::transmute(entry) };
     func(coreid);
