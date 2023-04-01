@@ -3,26 +3,12 @@ use crate::arch::riscv64::fwi::func;
 use crate::arch::riscv64::regs::Regs;
 
 #[no_mangle]
-pub extern "C" fn monitortrap(regs: &Regs) {
+pub extern "C" fn monitortrap(regs: &mut Regs) {
     let mcause = csr!(mcause);
 
     match mcause {
         cause::ECALL_S => {
-            // TODO: handle fwi functions in a separate handler
-            match regs.a7 {
-                func::WAKE_CORES => {
-                    extern "C" {
-                        static mut wakeup: i32;
-                    }
-                    unsafe {
-                        wakeup = 1;
-                    }
-                }
-                _ => {
-                    panic!("invalid ecall");
-                }
-            }
-
+            fwi_handler(regs);
             csr!(mepc = csr!(mepc) + 4);
         }
         _ => {
@@ -34,5 +20,25 @@ pub extern "C" fn monitortrap(regs: &Regs) {
                 csr!(mtval)
             );
         }
+    }
+}
+
+fn fwi_handler(regs: &mut Regs) {
+    match regs.a7 {
+        func::WAKE_CORES => {
+            wake_cores();
+        }
+        _ => {
+            regs.a0 = u64::MAX;
+        }
+    }
+}
+
+fn wake_cores() {
+    extern "C" {
+        static mut wakeup: i32;
+    }
+    unsafe {
+        wakeup = 1;
     }
 }
