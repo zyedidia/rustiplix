@@ -42,7 +42,7 @@ SECTIONS
     }
 
     .heap : {
-        . = ALIGN(16);
+        . = ALIGN(4K);
         _heap_start = .;
     }
 

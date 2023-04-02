@@ -1,3 +1,9 @@
+# Targets
+
+```
+rustup target add riscv64imac-unknown-none-elf
+```
+
 # Rust analyzer
 
 ```
