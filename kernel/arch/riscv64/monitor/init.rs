@@ -2,7 +2,7 @@ use crate::arch::riscv64::csr::{sie, sstatus, Priv};
 use crate::arch::riscv64::regs::{rd_gp, rd_tp};
 use crate::arch::riscv64::vm::Pagetable;
 use crate::bit::Bit;
-use crate::board::virt::machine;
+use crate::board::machine;
 use crate::cpu::cpu_noguard;
 use crate::primary::PrimaryCell;
 use crate::sys;

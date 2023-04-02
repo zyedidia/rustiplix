@@ -3,7 +3,7 @@ macro_rules! print
 {
     ($($args:tt)+) => ({
             use ::core::fmt::Write;
-            let mut uart = $crate::board::virt::UART.lock();
+            let mut uart = $crate::board::UART.lock();
             let _ = write!(uart, $($args)+);
     });
 }

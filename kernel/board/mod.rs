@@ -1,1 +1,3 @@
-pub mod virt;
+mod virt;
+
+pub use virt::*;

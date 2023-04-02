@@ -1,5 +1,5 @@
 use crate::arch::riscv64::cpu::rd_cpu;
-use crate::board::virt;
+use crate::board;
 
 // A global that becomes true when the secondary cores boot up.
 static mut BOOTED_ALL: bool = false;
@@ -26,11 +26,11 @@ pub struct Cpu {
     pub stack: usize,
 }
 
-static mut CPUS: [Cpu; virt::machine::NCORES] = [Cpu {
+static mut CPUS: [Cpu; board::machine::NCORES] = [Cpu {
     coreid: 0,
     primary: false,
     stack: 0,
-}; virt::machine::NCORES];
+}; board::machine::NCORES];
 
 // Initializes the core-local CPU state for coreid (the current core).
 pub unsafe fn init_cpu(coreid: usize, primary: bool) {

@@ -55,7 +55,7 @@ fn wake_cores() {
 }
 
 fn set_timer(stime_value: u64) {
-    use crate::board::virt::CLINT;
+    use crate::board::CLINT;
 
     CLINT.wr_mtimecmp(stime_value);
     csr!(mip = csr!(mip).set_bit(mip::STIP, false));
