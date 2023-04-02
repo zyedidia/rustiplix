@@ -8,7 +8,8 @@ use crate::sys;
 
 // TODO: in the future we should use pa2ka to construct addresses so that these devices are usable
 // from a high kernel mapping.
-pub static UART: SpinLock<Uart<DwApbUart>> = SpinLock::new(Uart::<DwApbUart>::new(0x10000000));
+pub static UART: SpinLock<Uart<DwApbUart>> =
+    SpinLock::new(Uart::<DwApbUart>::new(0x10000000 as *mut DwApbUart));
 pub static CLINT: &SifiveClint = unsafe { &*(0x200_0000 as *const SifiveClint) };
 
 pub mod machine {

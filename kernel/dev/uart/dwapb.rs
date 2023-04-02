@@ -8,10 +8,9 @@ pub struct DwApbUart {
     lsr: u32,
 }
 
-struct Lsr {}
-impl Lsr {
-    const DATA_READY: usize = 0;
-    const THR_EMPTY: usize = 5;
+mod lsr {
+    pub const DATA_READY: usize = 0;
+    pub const THR_EMPTY: usize = 5;
 }
 
 impl DwApbUart {
@@ -39,12 +38,12 @@ impl DwApbUart {
 
     fn thr_empty(&mut self) -> bool {
         let lsr = unsafe { (&mut self.lsr as *mut u32).read_volatile() };
-        lsr.bit(Lsr::THR_EMPTY)
+        lsr.bit(lsr::THR_EMPTY)
     }
 
     pub fn rx_empty(&mut self) -> bool {
         let lsr = unsafe { (&mut self.lsr as *mut u32).read_volatile() };
-        lsr.bit(Lsr::DATA_READY)
+        lsr.bit(lsr::DATA_READY)
     }
 }
 

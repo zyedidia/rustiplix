@@ -2,24 +2,20 @@ pub mod dwapb;
 pub mod virt;
 
 use core::fmt::{Error, Write};
-use core::marker::PhantomData;
 
 pub trait Putc {
     fn putc(&mut self, c: u8);
 }
 
 pub struct Uart<T: Putc> {
-    pub base: usize,
-
-    pub x: PhantomData<T>,
+    pub base: *mut T,
 }
 
+unsafe impl<T: Putc> Send for Uart<T> {}
+
 impl<T: Putc> Uart<T> {
-    pub const fn new(base: usize) -> Self {
-        Uart {
-            base,
-            x: PhantomData {},
-        }
+    pub const fn new(base: *mut T) -> Self {
+        Uart { base }
     }
 
     fn device(&mut self) -> &mut T {
