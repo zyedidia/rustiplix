@@ -2,11 +2,11 @@ local knit = require("knit")
 
 local prefix := riscv64-unknown-elf
 local target := riscv64imac-unknown-none-elf
+local objdir = ".obj/"
 
 local profile = cli.profile or "dev"
 
 local tools = {
-    rustc := rustc
     cc := $prefix-gcc
     as := $prefix-as
     ld := $prefix-ld
@@ -14,9 +14,6 @@ local tools = {
     objdump := $prefix-objdump
     qemu := qemu-system-riscv64
     gdb := gdb-multiarch
-    clippy := clippy-driver
-    rustfmt := rustfmt
-    rustdoc := rustdoc
 }
 
 local flags = {
@@ -44,11 +41,11 @@ local asm = {
     bootloader = knit.extrepl(knit.rglob("bootloader", "*.s"), ".s", ".asm.o"),
 }
 
-lib.bootloader = knit.prefix(lib.bootloader, ".obj/")
-lib.kmain = knit.prefix(lib.kmain, ".obj/")
-asm.kernel = knit.prefix(asm.kernel, ".obj/")
-asm.kmain = knit.prefix(asm.kmain, ".obj/")
-asm.bootloader = knit.prefix(asm.bootloader, ".obj/")
+lib.bootloader = knit.prefix(lib.bootloader, objdir)
+lib.kmain = knit.prefix(lib.kmain, objdir)
+asm.kernel = knit.prefix(asm.kernel, objdir)
+asm.kmain = knit.prefix(asm.kmain, objdir)
+asm.bootloader = knit.prefix(asm.bootloader, objdir)
 
 local link = {
     kernel = "link/virt/kernel.ld",
@@ -64,7 +61,7 @@ return b{
     $ all:VB: kernel.boot.elf
 
     $ $(lib.bootloader) $(lib.kmain): $(src.bootloader) $(src.kernel) $(src.kmain) $(src.cargo)
-        cargo build --profile $profile --out-dir .obj -Z unstable-options
+        cargo build --profile $profile --out-dir $objdir -Z unstable-options
 
     $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
         $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc

@@ -8,16 +8,18 @@ members = [
 
 [profile.dev]
 opt-level = 1
+panic = "abort"
 
 [profile.release]
 opt-level = 3
 lto = true
+panic = "abort"
 
 [profile.small]
 inherits = "release"
 opt-level = "s"
-lto = true
 
 [profile.unopt]
 inherits = "dev"
 opt-level = 0
+panic = "abort"
