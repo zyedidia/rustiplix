@@ -1,12 +1,13 @@
 use crate::dev::irq::sfclint::SifiveClint;
 use crate::dev::uart::dwapb::DwApbUart;
-use crate::dev::uart::Uart;
+use crate::dev::uart::UartWrapper;
 use crate::vm::pa2ka;
 
 use crate::sync::spinlock::SpinLock;
 
-pub static UART: SpinLock<Uart<DwApbUart>> =
-    SpinLock::new(Uart::<DwApbUart>::new(pa2ka(0x10000000) as *mut DwApbUart));
+pub static UART: SpinLock<UartWrapper<DwApbUart>> = SpinLock::new(UartWrapper::<DwApbUart>::new(
+    pa2ka(0x10000000) as *mut DwApbUart,
+));
 pub static CLINT: &SifiveClint = unsafe { &*(pa2ka(0x200_0000) as *const SifiveClint) };
 
 pub mod machine {

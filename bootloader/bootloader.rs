@@ -1,11 +1,9 @@
 use kernel::arch::monitor::init::{enter_kernel, init_kernel, init_monitor};
 use kernel::cpu::cpu;
 
-use core::slice;
-
-struct BootData {
-    entry: *mut u8,
-    data: &'static [u8],
+pub struct BootData {
+    pub entry: *mut u8,
+    pub data: &'static [u8],
 }
 
 #[repr(C)]
@@ -16,21 +14,35 @@ struct Payload {
     data: u8,
 }
 
+#[cfg(feature = "uart")]
+fn unpack() -> BootData {
+    crate::uart::recv()
+}
+
+#[cfg(feature = "payload")]
 fn unpack() -> BootData {
     extern "C" {
         static payload: Payload;
     }
 
     unsafe {
+        use core::slice;
+        use kernel::crc::crc32;
+
         let entry = payload.entry as *mut u8;
         let length = payload.size as usize;
+        let data = slice::from_raw_parts(&payload.data as *const u8, length);
 
-        BootData {
-            entry,
-            data: slice::from_raw_parts(&payload.data as *const u8, length),
-        }
+        assert!(payload.cksum == crc32(data));
+
+        BootData { entry, data }
     }
 }
+
+static mut BOOT: BootData = BootData {
+    entry: core::ptr::null_mut(),
+    data: &[],
+};
 
 #[no_mangle]
 pub extern "C" fn kmain() {
@@ -51,9 +63,14 @@ pub extern "C" fn kmain() {
                 boot.entry.add(i).write_volatile(boot.data[i]);
             }
         }
-        boot
+        // Store the boot data into a global so that the secondary cores can read it when they boot
+        // up.
+        unsafe {
+            BOOT = boot;
+            &BOOT
+        }
     } else {
-        unpack()
+        unsafe { &BOOT }
     };
 
     kernel::sync::fence::insn_fence();

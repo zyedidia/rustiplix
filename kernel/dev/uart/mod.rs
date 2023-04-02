@@ -3,38 +3,35 @@ pub mod virt;
 
 use core::fmt::{Error, Write};
 
-pub trait Putc {
-    fn putc(&mut self, c: u8);
+pub trait Uart {
+    fn init(&mut self, baud: u32);
+    fn tx(&mut self, b: u8);
+    fn tx_flush(&mut self);
+    fn rx(&mut self) -> u8;
+    fn rx_empty(&mut self) -> bool;
 }
 
-pub struct Uart<T: Putc> {
+pub struct UartWrapper<T: Uart> {
     pub base: *mut T,
 }
 
-unsafe impl<T: Putc> Send for Uart<T> {}
+unsafe impl<T: Uart> Send for UartWrapper<T> {}
 
-impl<T: Putc> Uart<T> {
+impl<T: Uart> UartWrapper<T> {
     pub const fn new(base: *mut T) -> Self {
-        Uart { base }
+        Self { base }
     }
 
-    fn device(&mut self) -> &mut T {
+    pub fn device(&mut self) -> &mut T {
         unsafe { &mut *(self.base as *mut T) }
     }
 }
 
-impl<T: Putc> Putc for Uart<T> {
-    fn putc(&mut self, c: u8) {
-        let uart = self.device();
-        uart.putc(c);
-    }
-}
-
-impl<T: Putc> Write for Uart<T> {
+impl<T: Uart> Write for UartWrapper<T> {
     fn write_str(&mut self, s: &str) -> Result<(), Error> {
         let uart = self.device();
         for c in s.bytes() {
-            uart.putc(c);
+            uart.tx(c);
         }
         Ok(())
     }

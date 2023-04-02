@@ -41,5 +41,10 @@ SECTIONS
         . = ALIGN(8);
     }
 
+    .heap : {
+        . = ALIGN(4K);
+        _heap_start = .;
+    }
+
     /DISCARD/ : { *(.comment .note .eh_frame) }
 }

@@ -12,6 +12,9 @@ crate-type = ["staticlib"]
 kernel = { path = "../kernel", features = ["monitor"], default-features = false }
 
 [features]
-default = ["virt"]
+default = ["virt", "payload"]
 virt = ["kernel/monitor", "kernel/virt"]
 visionfive2 = ["kernel/monitor", "kernel/visionfive2"]
+
+uart = []
+payload = []

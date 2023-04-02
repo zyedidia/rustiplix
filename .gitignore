@@ -1,7 +1,9 @@
 .knit
-.incremental
+.target
 .obj
+.rustc_info.json
 
+*.img
 *.list
 *.elf
 *.bin
@@ -14,6 +16,3 @@ doc/generated
 /tools/plboot/plboot
 
 todo.txt
-
-.target
-.rustc_info.json

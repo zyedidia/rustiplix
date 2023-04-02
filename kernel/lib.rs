@@ -22,6 +22,7 @@ pub mod bit;
 pub mod board;
 pub mod builtin;
 pub mod cpu;
+pub mod crc;
 pub mod dev;
 pub mod kalloc;
 pub mod primary;

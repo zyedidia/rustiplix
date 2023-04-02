@@ -4,3 +4,5 @@
 extern crate kernel;
 
 pub mod bootloader;
+
+pub mod uart;

@@ -5,6 +5,7 @@ local target := riscv64imac-unknown-none-elf
 local objdir = ".obj/"
 
 local profile = cli.profile or "dev"
+local board = cli.board or "visionfive2"
 
 local tools = {
     cc := $prefix-gcc
@@ -32,7 +33,10 @@ local src = {
 }
 
 local lib = {
-    bootloader = {"libbootloader.a"},
+    bootloader = {
+        payload = {"libbootloader.payload.a"},
+        uart = {"libbootloader.uart.a"},
+    },
     kmain = {"libkmain.a"},
 }
 
@@ -42,7 +46,8 @@ local asm = {
     bootloader = knit.extrepl(knit.rglob("bootloader", "*.s"), ".s", ".asm.o"),
 }
 
-lib.bootloader = knit.prefix(lib.bootloader, objdir)
+lib.bootloader.uart = knit.prefix(lib.bootloader.uart, objdir)
+lib.bootloader.payload = knit.prefix(lib.bootloader.payload, objdir)
 lib.kmain = knit.prefix(lib.kmain, objdir)
 asm.kernel = knit.prefix(asm.kernel, objdir)
 asm.kmain = knit.prefix(asm.kmain, objdir)
@@ -61,17 +66,24 @@ local plboot = {
 return b{
     $ all:VB: kernel.boot.elf
 
-    $ $(lib.bootloader): $(src.bootloader) $(src.kernel) $(src.cargo)
-        cargo -C bootloader build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options
+    $ $(lib.bootloader.payload): $(src.bootloader) $(src.kernel) $(src.cargo)
+        cargo -C bootloader build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options --no-default-features --features $board,payload
+        cp $objdir/libbootloader.a $output
+    $ $(lib.bootloader.uart): $(src.bootloader) $(src.kernel) $(src.cargo)
+        cargo -C bootloader build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options --no-default-features --features $board,uart
+        cp $objdir/libbootloader.a $output
     $ $(lib.kmain): $(src.kmain) $(src.kernel) $(src.cargo)
-        cargo -C kmain build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options
+        cargo -C kmain build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options --no-default-features --features $board
 
     $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
         $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
-    $ kernel.boot.elf: $(asm.kernel) $(asm.bootloader) $(lib.bootloader) $(link.bootloader)[I]
+    $ kernel.boot.elf: $(asm.kernel) $(asm.bootloader) $(lib.bootloader.payload) $(link.bootloader)[I]
         $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
     $ %.payload: %.elf $(plboot.bin)[I]
         ./$(plboot.bin) make -o $output $input
+
+    $ bootloader.elf: $(asm.kernel) $(asm.bootloader) $(lib.bootloader.uart) $(link.bootloader)[I]
+        $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
 
     $ .obj/%.asm.o: %.s
         $(tools.cc) $(flags.as) $input -c -o $output
@@ -81,11 +93,16 @@ return b{
         $(tools.objdump) $(flags.objdump) $input > $output
     $ %.bin: %.elf
         $(tools.objcopy) $input -O binary $output
+    $ %.img: %.bin
+        vf2-imager -i $input -o $output
     $ qemu:VB: kernel.boot.bin
         $(tools.qemu) $(flags.qemu) -kernel $input
     $ qemu-gdb:VB: kernel.boot.elf kernel.elf
         $(tools.qemu) $(flags.qemu) -kernel $(inputs[1]) -s -S &
         $(tools.gdb) -ex "file $(inputs[2])" -ex "target remote localhost:1234"
+
+    $ prog:VB: kernel.elf $(plboot.bin)[I]
+        ./$(plboot.bin) prog $input
 
     $ clippy:VB:
         cargo -C kmain clippy $(flags.cargo) -- $(flags.clippy)

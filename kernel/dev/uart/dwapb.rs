@@ -1,5 +1,5 @@
 use crate::bit::Bit;
-use crate::dev::uart::Putc;
+use crate::dev::uart::Uart;
 
 #[repr(C)]
 pub struct DwApbUart {
@@ -14,9 +14,16 @@ mod lsr {
 }
 
 impl DwApbUart {
-    pub fn init(&mut self) {}
+    fn thr_empty(&mut self) -> bool {
+        let lsr = unsafe { (&mut self.lsr as *mut u32).read_volatile() };
+        lsr.bit(lsr::THR_EMPTY)
+    }
+}
 
-    pub fn tx(&mut self, b: u8) {
+impl Uart for DwApbUart {
+    fn init(&mut self, baud: u32) {}
+
+    fn tx(&mut self, b: u8) {
         // Wait for thr to be empty before writing the byte.
         while !self.thr_empty() {}
         unsafe {
@@ -24,11 +31,11 @@ impl DwApbUart {
         }
     }
 
-    pub fn tx_flush(&mut self) {
+    fn tx_flush(&mut self) {
         while !self.thr_empty() {}
     }
 
-    pub fn rx(&mut self) -> u8 {
+    fn rx(&mut self) -> u8 {
         // Wait until there is data available.
         while self.rx_empty() {}
         // Read the data from rbr (same offset as thr).
@@ -36,19 +43,8 @@ impl DwApbUart {
         rbr as u8
     }
 
-    fn thr_empty(&mut self) -> bool {
+    fn rx_empty(&mut self) -> bool {
         let lsr = unsafe { (&mut self.lsr as *mut u32).read_volatile() };
-        lsr.bit(lsr::THR_EMPTY)
-    }
-
-    pub fn rx_empty(&mut self) -> bool {
-        let lsr = unsafe { (&mut self.lsr as *mut u32).read_volatile() };
-        lsr.bit(lsr::DATA_READY)
-    }
-}
-
-impl Putc for DwApbUart {
-    fn putc(&mut self, c: u8) {
-        self.tx(c);
+        !lsr.bit(lsr::DATA_READY)
     }
 }
