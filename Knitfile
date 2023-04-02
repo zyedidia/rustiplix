@@ -92,6 +92,8 @@ return b{
     $ format-check:VB:
         cargo fmt --check
 
+    $ check:VB: format-check clippy
+
     $ doc/generated:B:
         cargo doc
         mv .target/$target/doc $output
