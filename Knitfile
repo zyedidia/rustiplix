@@ -22,13 +22,10 @@ local O := s
 local riscv := -C code-model=medium
 
 local flags = {
-    rustc := --emit=link,obj,metadata --target $target -C opt-level=$O --edition 2021 --crate-type staticlib,lib $riscv -C incremental=.incremental -C embed-bitcode=no -A dead_code -A unused_variables -g
     as := -march=rv64imac_zicsr_zifencei -xassembler-with-cpp -mcmodel=medany -mabi=lp64
     qemu := -nographic -no-reboot -bios none -machine virt -m 2G -smp 4
-    rustfmt := --edition 2021
-    rustdoc := --target $target --edition 2021 --document-private-items
-    clippy := -D warnings -A clippy::missing-safety-doc
     objdump := -j .text -j .data -j .rodata -j .bss -j .stack -j .heap -j .payload -d
+    clippy := -D warnings -A clippy::missing-safety-doc
 }
 
 local src = {
@@ -37,45 +34,27 @@ local src = {
     bootloader = knit.rglob("bootloader", "*.rs"),
 }
 
-local rlib = {
-    kernel = {"libkernel.rlib"},
-    kmain = {"libkmain.rlib"},
-    bootloader = {"libbootloader.rlib"},
-}
-
-local obj = {
-    kernel = {"libkernel.a"},
-    kmain = {"libkmain.a"},
+local lib = {
     bootloader = {"libbootloader.a"},
-    asm = {
-        kernel = knit.extrepl(knit.rglob("kernel", "*.s"), ".s", ".asm.o"),
-        kmain = knit.extrepl(knit.rglob("kmain", "*.s"), ".s", ".asm.o"),
-        bootloader = knit.extrepl(knit.rglob("bootloader", "*.s"), ".s", ".asm.o"),
-    }
+    kmain = {"libkmain.a"},
 }
 
-rlib.kernel = knit.prefix(rlib.kernel, ".obj/")
-rlib.kmain = knit.prefix(rlib.kmain, ".obj/")
-rlib.bootloader = knit.prefix(rlib.bootloader, ".obj/")
-obj.kernel = knit.prefix(obj.kernel, ".obj/")
-obj.kmain = knit.prefix(obj.kmain, ".obj/")
-obj.bootloader = knit.prefix(obj.bootloader, ".obj/")
-obj.asm.kernel = knit.prefix(obj.asm.kernel, ".obj/")
-obj.asm.kmain = knit.prefix(obj.asm.kmain, ".obj/")
-obj.asm.bootloader = knit.prefix(obj.asm.bootloader, ".obj/")
+local asm = {
+    kernel = knit.extrepl(knit.rglob("kernel", "*.s"), ".s", ".asm.o"),
+    kmain = knit.extrepl(knit.rglob("kmain", "*.s"), ".s", ".asm.o"),
+    bootloader = knit.extrepl(knit.rglob("bootloader", "*.s"), ".s", ".asm.o"),
+}
+
+lib.bootloader = knit.prefix(lib.bootloader, ".obj/")
+lib.kmain = knit.prefix(lib.kmain, ".obj/")
+asm.kernel = knit.prefix(asm.kernel, ".obj/")
+asm.kmain = knit.prefix(asm.kmain, ".obj/")
+asm.bootloader = knit.prefix(asm.bootloader, ".obj/")
 
 local link = {
     kernel = "link/virt/kernel.ld",
     bootloader = "link/virt/bootloader.ld",
 }
-
-local libdir = knit.shell(f"rustc --print target-libdir --target $target")
-local liballoc = knit.glob(f"$libdir/liballoc*.rlib")
-local librust = knit.join(
-    knit.glob(f"$libdir/libcore*.rlib"),
-    knit.glob(f"$libdir/libcompiler_builtins*.rlib"),
-    liballoc
-)
 
 local plboot = {
     bin = "tools/plboot/plboot",
@@ -83,19 +62,17 @@ local plboot = {
 }
 
 return b{
-    $ kernel.boot.elf: $(obj.asm.kernel) $(obj.asm.bootloader) $(obj.kernel) $(obj.bootloader) $(link.bootloader)[I]
-        $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input $librust -o $output -nostdlib -nostdinc
-    $ kernel.elf: $(obj.asm.kernel) $(obj.asm.kmain) $(obj.kernel) $(obj.kmain) $(link.kernel)[I]
-        $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input $librust -o $output -nostdlib -nostdinc
+    $ all:VB: kernel.boot.elf
+
+    $ $(lib.bootloader) $(lib.kmain): $(src.bootloader) $(src.kernel)
+        cargo build --out-dir .obj -Z unstable-options
+
+    $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
+        $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
+    $ kernel.boot.elf: $(asm.kernel) $(asm.bootloader) $(lib.bootloader) $(link.bootloader)[I]
+        $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
     $ %.payload: %.elf $(plboot.bin)[I]
         ./$(plboot.bin) make -o $output $input
-
-    $ $(obj.kmain) $(rlib.kmain): $(src.kmain) $(rlib.kernel)
-        $(tools.rustc) $(flags.rustc) kmain/lib.rs --crate-name kmain --extern kernel=$(rlib.kernel) --extern alloc=$liballoc --out-dir .obj
-    $ $(obj.bootloader) $(rlib.bootloader): $(src.bootloader) $(rlib.kernel)
-        $(tools.rustc) $(flags.rustc) bootloader/lib.rs --crate-name bootloader --extern kernel=$(rlib.kernel) --out-dir .obj
-    $ $(obj.kernel) $(rlib.kernel): $(src.kernel)
-        $(tools.rustc) $(flags.rustc) kernel/lib.rs --crate-name kernel --extern alloc=$liballoc --out-dir .obj
 
     $ .obj/%.asm.o: %.s
         $(tools.cc) $(flags.as) $input -c -o $output
@@ -112,27 +89,13 @@ return b{
         $(tools.gdb) -ex "file $(inputs[2])" -ex "target remote localhost:1234"
 
     $ clippy:VB:
-        $(tools.clippy) $(flags.rustc) $(flags.clippy) kernel/lib.rs --crate-name kernel --out-dir .obj
-        $(tools.clippy) $(flags.rustc) $(flags.clippy) kmain/lib.rs --extern kernel=$(rlib.kernel) --crate-name kmain --out-dir .obj
+        cargo clippy -- $(flags.clippy)
 
     $ format:VB:
-        $(tools.rustfmt) $(flags.rustfmt) --emit files kernel/lib.rs kmain/lib.rs
+        cargo fmt
     $ format-check:VB:
-        $(tools.rustfmt) $(flags.rustfmt) --check kernel/lib.rs kmain/lib.rs
-
-    $ check:VB: format-check clippy
-
-    $ doc/generated:B:
-        $(tools.rustdoc) $(flags.rustdoc) kernel/lib.rs --crate-name kernel -o $output
-        $(tools.rustdoc) $(flags.rustdoc) kmain/lib.rs --extern kernel=$(rlib.kernel) --crate-name kmain -o $output
-
-    $ rust-project.json: ./tools/rust-project.sh
-        ./tools/rust-project.sh > $output
+        cargo fmt --check
 
     $ $(plboot.bin): $(plboot.src)
         cd tools/plboot && go build
-
-    $ clean:VB:
-        knit -t clean
-        rm -rf .incremental
 }

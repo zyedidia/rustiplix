@@ -44,7 +44,7 @@ pub extern "C" fn kmain() {
 
     let boot = if primary {
         let boot = unpack();
-        assert!(boot.data.len() > 0);
+        assert!(!boot.data.is_empty());
 
         for i in (0..boot.data.len()).rev() {
             unsafe {

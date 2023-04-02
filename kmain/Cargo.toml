@@ -1,0 +1,12 @@
+[package]
+name = "kmain"
+version = "0.1.0"
+authors = ["Zachary Yedidia"]
+edition = "2021"
+
+[lib]
+path = "lib.rs"
+crate-type = ["staticlib"]
+
+[dependencies]
+kernel = { path = "../kernel" }
