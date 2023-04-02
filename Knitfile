@@ -1,11 +1,14 @@
 local knit = require("knit")
 
+local _, uconf = pcall(include, "build/conf.knit")
+conf = {
+    board = choose(cli.board, uconf.board, "virt"),
+    profile = choose(cli.profile, uconf.profile, "dev")
+}
+
 local prefix := riscv64-unknown-elf
 local target := riscv64imac-unknown-none-elf
 local objdir = ".obj/"
-
-local profile = cli.profile or "dev"
-local board = cli.board or "virt"
 
 local tools = {
     cc := $prefix-gcc
@@ -22,7 +25,11 @@ local flags = {
     qemu := -nographic -no-reboot -bios none -machine virt -m 2G -smp 4
     objdump := -j .text -j .data -j .rodata -j .bss -j .stack -j .heap -j .payload -d
     clippy := -D warnings -A clippy::missing-safety-doc
-    cargo = "-q"
+    cargo = {
+        base = "-q",
+        features := --no-default-features --features $(conf.board)
+        build := --profile $(conf.profile) --out-dir ../$objdir -Z unstable-options
+    }
 }
 
 local src = {
@@ -54,8 +61,8 @@ asm.kmain = knit.prefix(asm.kmain, objdir)
 asm.bootloader = knit.prefix(asm.bootloader, objdir)
 
 local link = {
-    kernel = f"link/$board/kernel.ld",
-    bootloader = f"link/$board/bootloader.ld",
+    kernel = f"link/$(conf.board)/kernel.ld",
+    bootloader = f"link/$(conf.board)/bootloader.ld",
 }
 
 local plboot = {
@@ -67,13 +74,13 @@ return b{
     $ all:VB: kernel.boot.elf
 
     $ $(lib.bootloader.payload): $(src.bootloader) $(src.kernel) $(src.cargo)
-        cargo -C bootloader build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options --no-default-features --features $board,payload
+        cargo -C bootloader build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features) --features payload
         cp $objdir/libbootloader.a $output
     $ $(lib.bootloader.uart): $(src.bootloader) $(src.kernel) $(src.cargo)
-        cargo -C bootloader build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options --no-default-features --features $board,uart
+        cargo -C bootloader build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features) --features uart
         cp $objdir/libbootloader.a $output
     $ $(lib.kmain): $(src.kmain) $(src.kernel) $(src.cargo)
-        cargo -C kmain build $(flags.cargo) --profile $profile --out-dir ../$objdir -Z unstable-options --no-default-features --features $board
+        cargo -C kmain build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features)
 
     $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
         $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
@@ -105,20 +112,20 @@ return b{
         ./$(plboot.bin) prog $input
 
     $ clippy:VB:
-        cargo -C kmain clippy $(flags.cargo) -- $(flags.clippy)
-        cargo -C bootloader clippy $(flags.cargo) -- $(flags.clippy)
+        cargo -C kmain clippy $(flags.cargo.base) -- $(flags.clippy)
+        cargo -C bootloader clippy $(flags.cargo.base) -- $(flags.clippy)
 
     $ format:VB:
-        cargo -C kmain fmt $(flags.cargo)
-        cargo -C bootloader fmt $(flags.cargo)
+        cargo -C kmain fmt $(flags.cargo.base)
+        cargo -C bootloader fmt $(flags.cargo.base)
     $ format-check:VB:
-        cargo -C kmain fmt --check $(flags.cargo)
-        cargo -C bootloader fmt --check $(flags.cargo)
+        cargo -C kmain fmt --check $(flags.cargo.base)
+        cargo -C bootloader fmt --check $(flags.cargo.base)
 
     $ check:VB: format-check clippy
 
     $ doc/generated:B:
-        cargo -C kernel doc $(flags.cargo)
+        cargo -C kernel doc $(flags.cargo.base)
         mv .target/$target/doc $output
 
     $ $(plboot.bin): $(plboot.src)
@@ -126,6 +133,6 @@ return b{
 
     $ clean:VB:
         knit -t clean
-        cargo -C kmain clean $(flags.cargo)
-        cargo -C bootloader clean $(flags.cargo)
+        cargo -C kmain clean $(flags.cargo.base)
+        cargo -C bootloader clean $(flags.cargo.base)
 }

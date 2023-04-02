@@ -9,6 +9,8 @@
 *.bin
 *.payload
 
+/build/conf.knit
+
 rust-project.json
 
 doc/generated
