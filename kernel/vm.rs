@@ -14,15 +14,32 @@ pub const fn iska(va: usize) -> bool {
 }
 
 #[inline]
+pub const fn hka2pa(ka: usize) -> usize {
+    ka - sys::HIGHMEM_BASE
+}
+
+#[inline]
+#[cfg(feature = "kernel")]
 pub const fn ka2pa(ka: usize) -> usize {
     ka - sys::HIGHMEM_BASE
 }
 
 #[inline]
+#[cfg(feature = "monitor")]
+pub const fn ka2pa(ka: usize) -> usize {
+    ka
+}
+
+#[inline]
+#[cfg(feature = "kernel")]
 pub const fn pa2ka(pa: usize) -> usize {
-    // TODO: In the future this function should be statically different at compile-time depending
-    // on whether the monitor or kernel is being compiled.
     pa + sys::HIGHMEM_BASE
+}
+
+#[inline]
+#[cfg(feature = "monitor")]
+pub const fn pa2ka(pa: usize) -> usize {
+    pa
 }
 
 #[inline]

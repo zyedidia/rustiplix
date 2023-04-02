@@ -67,14 +67,14 @@ static PAGETABLE: PrimaryCell<Pagetable> = PrimaryCell::new(Pagetable::new());
 
 pub fn init_kernel(primary: bool) {
     use crate::arch::riscv64::vm::vm_fence;
-    use crate::vm::{pa2ka, perm};
+    use crate::vm::{pa2hka, perm};
 
     if primary {
         // If primary core, create mappings for the initial pagetable.
         let map_giga = |pa: usize| unsafe {
             let pt = PAGETABLE.get_mut();
             pt.map_giga(pa, pa, perm::READ | perm::WRITE | perm::EXEC);
-            pt.map_giga(pa2ka(pa), pa, perm::READ | perm::WRITE | perm::EXEC);
+            pt.map_giga(pa2hka(pa), pa, perm::READ | perm::WRITE | perm::EXEC);
         };
 
         for mem in machine::MEM_RANGES {
