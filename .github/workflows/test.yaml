@@ -16,6 +16,8 @@ jobs:
     - run: rustup target add riscv64imac-unknown-none-elf
 
     - uses: zyedidia/setup-knit@v1
+      with:
+        knit-version: 15d874a
 
     # set up gnu toolchain
     - name: Install GNU toolchain
