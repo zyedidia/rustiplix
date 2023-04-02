@@ -1,5 +1,5 @@
 pub mod irq {
-    use crate::arch::riscv64::csr::Sstatus;
+    use crate::arch::riscv64::csr::sstatus;
     use crate::bit::Bit;
 
     pub fn init() {
@@ -11,15 +11,15 @@ pub mod irq {
     }
 
     pub unsafe fn on() {
-        csr!(sstatus = csr!(sstatus).set_bit(Sstatus::Sie as usize, true));
+        csr!(sstatus = csr!(sstatus).set_bit(sstatus::SIE, true));
     }
 
     pub unsafe fn off() {
-        csr!(sstatus = csr!(sstatus).set_bit(Sstatus::Sie as usize, false));
+        csr!(sstatus = csr!(sstatus).set_bit(sstatus::SIE, false));
     }
 
     pub fn enabled() -> bool {
-        csr!(sstatus).bit(Sstatus::Sie as usize)
+        csr!(sstatus).bit(sstatus::SIE)
     }
 }
 

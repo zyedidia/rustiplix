@@ -1,4 +1,4 @@
-use crate::arch::riscv64::csr::{Priv, Sie, Sstatus};
+use crate::arch::riscv64::csr::{sie, sstatus, Priv};
 use crate::arch::riscv64::regs::{rd_gp, rd_tp};
 use crate::arch::riscv64::vm::Pagetable;
 use crate::bit::Bit;
@@ -89,8 +89,8 @@ pub fn init_kernel(primary: bool) {
     vm_fence();
 
     // Prepare to enable interrupts (will only be enabled when sstatus is written as well).
-    csr!(sie = (1 << Sie::Stie as usize) | (1 << Sie::Ssie as usize));
+    csr!(sie = (1 << sie::STIE) | (1 << sie::SSIE));
 
     // Enable SUM bit so supervisor can access user-mode pages.
-    csr!(sstatus = csr!(sstatus) | (1 << Sstatus::Sum as usize))
+    csr!(sstatus = csr!(sstatus) | (1 << sstatus::SUM))
 }

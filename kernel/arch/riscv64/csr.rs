@@ -39,17 +39,17 @@ pub enum Priv {
     M = 0b11,
 }
 
-pub enum Sstatus {
-    Sie = 1,
-    Spie = 5,
-    Spp = 8,
-    Sum = 18,
+pub mod sstatus {
+    pub const SIE: usize = 1;
+    pub const SPIE: usize = 5;
+    pub const SPP: usize = 8;
+    pub const SUM: usize = 18;
 }
 
-pub enum Sie {
-    Seie = 9,
-    Stie = 5,
-    Ssie = 1,
+pub mod sie {
+    pub const SEIE: usize = 9;
+    pub const STIE: usize = 5;
+    pub const SSIE: usize = 1;
 }
 
 pub mod mip {
