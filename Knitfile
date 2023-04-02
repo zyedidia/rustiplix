@@ -30,7 +30,7 @@ local src = {
     kernel = knit.rglob("kernel", "*.rs"),
     kmain = knit.rglob("kmain", "*.rs"),
     bootloader = knit.rglob("bootloader", "*.rs"),
-    cargo = knit.rglob(".", "Cargo.toml")
+    cargo = knit.rglob(".", "Cargo.toml") + {".cargo/config.toml"},
 }
 
 local lib = {
@@ -101,4 +101,8 @@ return b{
 
     $ $(plboot.bin): $(plboot.src)
         cd tools/plboot && go build
+
+    $ clean:VB:
+        knit -t clean
+        cargo clean
 }
