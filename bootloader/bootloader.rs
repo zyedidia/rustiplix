@@ -1,4 +1,4 @@
-use kernel::arch::riscv64::monitor::init::{enter_smode, init_kernel, init_monitor};
+use kernel::arch::monitor::init::{enter_kernel, init_kernel, init_monitor};
 use kernel::cpu::cpu;
 
 use core::slice;
@@ -35,7 +35,7 @@ fn unpack() -> BootData {
 #[no_mangle]
 pub extern "C" fn kmain() {
     init_monitor();
-    enter_smode();
+    enter_kernel();
 
     let primary = cpu().primary;
     let coreid = cpu().coreid;

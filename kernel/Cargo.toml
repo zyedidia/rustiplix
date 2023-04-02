@@ -9,6 +9,8 @@ path = "lib.rs"
 crate-type = ["rlib"]
 
 [features]
-default = ["kernel"]
+default = ["kernel", "virt"]
 kernel = []
 monitor = []
+virt = []
+visionfive2 = []

@@ -1,6 +1,6 @@
-use kernel::arch::riscv64::fwi::wake_cores;
-use kernel::arch::riscv64::timer;
-use kernel::arch::riscv64::trap::irq;
+use kernel::arch::fwi::wake_cores;
+use kernel::arch::timer;
+use kernel::arch::trap::irq;
 use kernel::cpu::cpu;
 use kernel::kalloc::global::{init_alloc, kallocpage};
 use kernel::println;

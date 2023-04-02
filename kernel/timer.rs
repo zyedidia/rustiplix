@@ -1,4 +1,4 @@
-use crate::arch::riscv64::timer;
+use crate::arch::timer;
 
 pub fn delay_cycles(cyc: u64) {
     let rb = timer::cycles();

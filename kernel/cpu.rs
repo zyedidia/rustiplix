@@ -1,4 +1,4 @@
-use crate::arch::riscv64::cpu::rd_cpu;
+use crate::arch::cpu::rd_cpu;
 use crate::board;
 
 // A global that becomes true when the secondary cores boot up.
@@ -38,7 +38,7 @@ pub unsafe fn init_cpu(coreid: usize, primary: bool) {
         static _stack_start: u8;
     }
 
-    use crate::arch::riscv64::cpu::wr_cpu;
+    use crate::arch::cpu::wr_cpu;
     CPUS[coreid].coreid = coreid;
     CPUS[coreid].primary = primary;
     CPUS[coreid].stack = (&_stack_start as *const _ as usize) + (coreid + 1) * 4096;
@@ -59,7 +59,7 @@ pub struct CpuGuard<'a> {
     was_en: bool,
 }
 
-use crate::arch::riscv64::trap::irq;
+use crate::arch::trap::irq;
 use core::ops::Deref;
 
 impl CpuGuard<'_> {

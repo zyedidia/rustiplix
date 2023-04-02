@@ -43,7 +43,7 @@ pub fn init_monitor() {
     }
 }
 
-pub fn enter_smode() {
+pub fn enter_kernel() {
     // Write S-mode to mstatus.MPP.
     csr!(mstatus = csr!(mstatus).set_bits(12, 11, Priv::S as usize));
     // Disable paging.

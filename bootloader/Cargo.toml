@@ -10,3 +10,8 @@ crate-type = ["staticlib"]
 
 [dependencies]
 kernel = { path = "../kernel", features = ["monitor"], default-features = false }
+
+[features]
+default = ["virt"]
+virt = ["kernel/monitor", "kernel/virt"]
+visionfive2 = ["kernel/monitor", "kernel/visionfive2"]
