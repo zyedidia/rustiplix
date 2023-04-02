@@ -2,6 +2,8 @@ use core::cell::UnsafeCell;
 use core::sync::atomic::AtomicBool;
 use core::sync::atomic::Ordering::{Acquire, Release};
 
+use crate::arch::trap::irq;
+
 pub struct SpinLock<T> {
     locked: AtomicBool,
     value: UnsafeCell<T>,
@@ -18,14 +20,20 @@ impl<T> SpinLock<T> {
     }
 
     pub fn lock(&self) -> Guard<T> {
+        let en = irq::enabled();
+        unsafe { irq::off() };
         while self.locked.swap(true, Acquire) {}
-        Guard { lock: self }
+        Guard {
+            irqen: en,
+            lock: self,
+        }
     }
 }
 
 use core::ops::{Deref, DerefMut};
 
 pub struct Guard<'a, T> {
+    irqen: bool,
     lock: &'a SpinLock<T>,
 }
 
@@ -47,5 +55,8 @@ impl<T> DerefMut for Guard<'_, T> {
 impl<T> Drop for Guard<'_, T> {
     fn drop(&mut self) {
         self.lock.locked.store(false, Release);
+        if self.irqen {
+            unsafe { irq::on() };
+        }
     }
 }
