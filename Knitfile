@@ -5,7 +5,7 @@ local target := riscv64imac-unknown-none-elf
 local objdir = ".obj/"
 
 local profile = cli.profile or "dev"
-local board = cli.board or "visionfive2"
+local board = cli.board or "virt"
 
 local tools = {
     cc := $prefix-gcc
