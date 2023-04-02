@@ -1,4 +1,3 @@
-use crate::arch::riscv64::trap::irq;
 use crate::cpu::cpu;
 
 pub struct SifiveClint {}
@@ -13,7 +12,6 @@ impl SifiveClint {
     }
 
     pub fn wr_mtimecmp(&self, val: u64) {
-        assert!(!irq::enabled());
         let base = self as *const _ as *const u8;
         unsafe {
             let mtimecmp = base.add(0x4000 + 8 * cpu().coreid) as *mut u64;

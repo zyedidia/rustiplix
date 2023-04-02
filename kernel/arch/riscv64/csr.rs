@@ -52,6 +52,16 @@ pub enum Sie {
     Ssie = 1,
 }
 
+pub mod mip {
+    pub const STIP: usize = 5;
+    pub const MTIP: usize = 7;
+}
+
+pub mod mie {
+    pub const STIE: usize = 5;
+    pub const MTIE: usize = 7;
+}
+
 pub mod cause {
     // interrupts
     // software timer interrupt

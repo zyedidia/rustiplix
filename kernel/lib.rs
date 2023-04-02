@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
+#![feature(new_uninit)]
 
 pub extern crate alloc;
 

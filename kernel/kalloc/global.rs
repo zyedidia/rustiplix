@@ -1,6 +1,8 @@
 use crate::sync::spinlock::SpinLock;
+use crate::sys;
 
-use alloc::alloc::{GlobalAlloc, Layout};
+use alloc::alloc::{AllocError, GlobalAlloc, Layout};
+use alloc::boxed::Box;
 
 pub trait Alloc {
     unsafe fn init(&mut self, start: *mut u8, size: usize);
@@ -37,4 +39,14 @@ static ALLOCATOR: KernelAlloc<PageAlloc> = KernelAlloc::new(PageAlloc::new_unini
 
 pub unsafe fn init_alloc(start: *mut u8, size: usize) {
     unsafe { ALLOCATOR.internal.lock().init(start, size) };
+}
+
+pub fn kallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
+    let page = Box::<[u8; sys::PAGESIZE]>::try_new_uninit()?;
+    unsafe { Ok(page.assume_init()) }
+}
+
+pub fn zallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
+    let page = Box::<[u8; sys::PAGESIZE]>::try_new_zeroed()?;
+    unsafe { Ok(page.assume_init()) }
 }
