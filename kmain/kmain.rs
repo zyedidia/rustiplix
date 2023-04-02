@@ -31,8 +31,10 @@ pub extern "C" fn kmain() {
         return;
     }
 
-    let x = Box::new([0u8; 4096]);
-    let y = Box::new(1);
-    let z = Box::new(1);
-    println!("{:p} {:p} {:p}", x, y, z);
+    let x = Box::try_new([0u8; 4096]);
+    if let Ok(y) = x {
+        println!("{:p}", y);
+    } else {
+        println!("allocation failed");
+    }
 }

@@ -63,7 +63,7 @@ local plboot = {
 return b{
     $ all:VB: kernel.boot.elf
 
-    $ $(lib.bootloader) $(lib.kmain): $(src.bootloader) $(src.kernel) $(src.cargo)
+    $ $(lib.bootloader) $(lib.kmain): $(src.bootloader) $(src.kernel) $(src.kmain) $(src.cargo)
         cargo build --profile $profile --out-dir .obj -Z unstable-options
 
     $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
