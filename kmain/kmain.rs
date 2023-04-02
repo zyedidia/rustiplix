@@ -14,6 +14,11 @@ fn heap_start() -> *mut u8 {
     }
 }
 
+#[inline(never)]
+fn foo() {
+    panic!("foo");
+}
+
 #[no_mangle]
 pub extern "C" fn kmain() {
     if cpu().primary {
@@ -30,6 +35,8 @@ pub extern "C" fn kmain() {
     if !cpu().primary {
         return;
     }
+
+    foo();
 
     let x = Box::try_new([0u8; 4096]);
     if let Ok(y) = x {

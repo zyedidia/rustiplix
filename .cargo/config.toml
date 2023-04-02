@@ -1,4 +1,4 @@
 [build]
 target = "riscv64imac-unknown-none-elf"
-rustflags = ["-Adead_code", "-Aunused_variables"]
+rustflags = ["-Adead_code", "-Aunused_variables", "-Cforce-frame-pointers"]
 target-dir = ".target"

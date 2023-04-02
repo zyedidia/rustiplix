@@ -1,3 +1,4 @@
+pub mod backtrace;
 pub mod panic;
 
 use core::arch::asm;
