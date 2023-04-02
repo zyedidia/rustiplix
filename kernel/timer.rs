@@ -1,22 +1,19 @@
 use crate::arch::timer;
 
-pub fn delay_cycles(cyc: u64) {
-    let rb = timer::cycles();
+fn delay(amt: u64, time: fn() -> u64) {
+    let rb = time();
     loop {
-        let ra = timer::cycles();
-        if (ra - rb) >= cyc {
+        let ra = time();
+        if (ra - rb) >= amt {
             break;
         }
     }
 }
 
+pub fn delay_cycles(cyc: u64) {
+    delay(cyc, timer::cycles);
+}
+
 pub fn delay_us(us: u64) {
-    let t = us * timer::freq() / 1_000_000;
-    let rb = timer::time();
-    loop {
-        let ra = timer::time();
-        if (ra - rb) >= t {
-            break;
-        }
-    }
+    delay(us * timer::freq() / 1_000_000, timer::time);
 }
