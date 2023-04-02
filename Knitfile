@@ -3,6 +3,8 @@ local knit = require("knit")
 local prefix := riscv64-unknown-elf
 local target := riscv64imac-unknown-none-elf
 
+local profile = cli.profile or "dev"
+
 local tools = {
     rustc := rustc
     cc := $prefix-gcc
@@ -17,10 +19,6 @@ local tools = {
     rustdoc := rustdoc
 }
 
-local O := s
-
-local riscv := -C code-model=medium
-
 local flags = {
     as := -march=rv64imac_zicsr_zifencei -xassembler-with-cpp -mcmodel=medany -mabi=lp64
     qemu := -nographic -no-reboot -bios none -machine virt -m 2G -smp 4
@@ -32,6 +30,7 @@ local src = {
     kernel = knit.rglob("kernel", "*.rs"),
     kmain = knit.rglob("kmain", "*.rs"),
     bootloader = knit.rglob("bootloader", "*.rs"),
+    cargo = knit.rglob(".", "Cargo.toml")
 }
 
 local lib = {
@@ -64,8 +63,8 @@ local plboot = {
 return b{
     $ all:VB: kernel.boot.elf
 
-    $ $(lib.bootloader) $(lib.kmain): $(src.bootloader) $(src.kernel)
-        cargo build --out-dir .obj -Z unstable-options
+    $ $(lib.bootloader) $(lib.kmain): $(src.bootloader) $(src.kernel) $(src.cargo)
+        cargo build --profile $profile --out-dir .obj -Z unstable-options
 
     $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
         $(tools.cc) -T$(link.kernel) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
@@ -95,6 +94,10 @@ return b{
         cargo fmt
     $ format-check:VB:
         cargo fmt --check
+
+    $ doc/generated:B:
+        cargo doc
+        mv .target/$target/doc $output
 
     $ $(plboot.bin): $(plboot.src)
         cd tools/plboot && go build
