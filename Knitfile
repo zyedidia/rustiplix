@@ -54,8 +54,8 @@ asm.kmain = knit.prefix(asm.kmain, objdir)
 asm.bootloader = knit.prefix(asm.bootloader, objdir)
 
 local link = {
-    kernel = "link/virt/kernel.ld",
-    bootloader = "link/virt/bootloader.ld",
+    kernel = f"link/$board/kernel.ld",
+    bootloader = f"link/$board/bootloader.ld",
 }
 
 local plboot = {
