@@ -9,4 +9,4 @@ path = "lib.rs"
 crate-type = ["staticlib"]
 
 [dependencies]
-kernel = { path = "../kernel" }
+kernel = { path = "../kernel", features = ["kernel"], default-features = false }

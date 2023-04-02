@@ -7,3 +7,8 @@ edition = "2021"
 [lib]
 path = "lib.rs"
 crate-type = ["rlib"]
+
+[features]
+default = ["kernel"]
+kernel = []
+monitor = []

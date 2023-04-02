@@ -4,6 +4,12 @@
 #![feature(allocator_api)]
 #![feature(new_uninit)]
 
+#[cfg(all(feature = "kernel", feature = "monitor"))]
+compile_error!("feature \"kernel\" and feature \"monitor\" cannot be enabled at the same time");
+
+#[cfg(not(any(feature = "kernel", feature = "monitor")))]
+compile_error!("one of feature \"kernel\" or feature \"monitor\" must be enabled");
+
 pub extern crate alloc;
 
 #[macro_use]
