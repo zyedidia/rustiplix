@@ -1,12 +1,7 @@
 use crate::sys;
-
-use crate::kalloc::global::Alloc;
 use core::mem::size_of;
 
-// This is a simple page allocator. It is horribly space-inefficient because it allocates twice as
-// much memory as necessary.
-
-pub struct PageAlloc {
+pub struct KrAlloc {
     start: *mut u8,
     end: *mut u8,
 
@@ -14,17 +9,17 @@ pub struct PageAlloc {
     freep: *mut Header,
 }
 
-unsafe impl Send for PageAlloc {}
+unsafe impl Send for KrAlloc {}
 
-#[repr(align(4096))]
+#[repr(align(16))]
 struct Header {
     next: *mut Header,
     size: usize,
 }
 
-impl PageAlloc {
-    pub const fn new_uninit() -> PageAlloc {
-        PageAlloc {
+impl KrAlloc {
+    pub const fn new_uninit() -> KrAlloc {
+        KrAlloc {
             start: core::ptr::null_mut(),
             end: core::ptr::null_mut(),
             base: Header {
@@ -63,17 +58,15 @@ impl PageAlloc {
         }
         self.freep
     }
-}
 
-impl Alloc for PageAlloc {
-    unsafe fn init(&mut self, start: *mut u8, size: usize) {
+    pub unsafe fn init(&mut self, start: *mut u8, size: usize) {
         assert!(size != 0 && size % sys::PAGESIZE == 0);
         assert!(!start.is_null() && start as usize % 16 == 0);
         self.start = start;
         self.end = unsafe { start.add(size) };
     }
 
-    fn alloc(&mut self, size: usize) -> *mut u8 {
+    pub fn alloc(&mut self, size: usize) -> *mut u8 {
         assert!(!self.start.is_null());
         assert!(size > 0);
 
@@ -115,36 +108,34 @@ impl Alloc for PageAlloc {
         }
     }
 
-    fn dealloc(&mut self, ptr: *mut u8) {
+    pub unsafe fn dealloc(&mut self, ptr: *mut u8) {
         if ptr.is_null() {
             return;
         }
 
         assert!(!self.start.is_null());
 
-        unsafe {
-            let bp = (ptr as *mut Header).sub(1);
-            let mut p = self.freep;
-            while !(bp > p && bp < (*p).next) {
-                if p >= (*p).next && (bp > p || bp < (*p).next) {
-                    break;
-                }
-                p = (*p).next;
+        let bp = (ptr as *mut Header).sub(1);
+        let mut p = self.freep;
+        while !(bp > p && bp < (*p).next) {
+            if p >= (*p).next && (bp > p || bp < (*p).next) {
+                break;
             }
-
-            if bp.add((*bp).size) == (*p).next {
-                (*bp).size += (*(*p).next).size;
-                (*bp).next = (*(*p).next).next;
-            } else {
-                (*bp).next = (*p).next;
-            }
-            if p.add((*p).size) == bp {
-                (*p).size += (*bp).size;
-                (*p).next = (*bp).next;
-            } else {
-                (*p).next = bp;
-            }
-            self.freep = p;
+            p = (*p).next;
         }
+
+        if bp.add((*bp).size) == (*p).next {
+            (*bp).size += (*(*p).next).size;
+            (*bp).next = (*(*p).next).next;
+        } else {
+            (*bp).next = (*p).next;
+        }
+        if p.add((*p).size) == bp {
+            (*p).size += (*bp).size;
+            (*p).next = (*bp).next;
+        } else {
+            (*p).next = bp;
+        }
+        self.freep = p;
     }
 }

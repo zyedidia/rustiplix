@@ -17,7 +17,7 @@ fn heap_start() -> *mut u8 {
 #[no_mangle]
 pub extern "C" fn kmain() {
     if cpu().primary {
-        unsafe { init_alloc(heap_start(), 4096 * 6) };
+        unsafe { init_alloc(heap_start(), 4096 * 4096) };
         wake_cores();
     }
 
@@ -33,12 +33,13 @@ pub extern "C" fn kmain() {
         return;
     }
 
-    let x = kallocpage();
-    if let Ok(y) = x {
-        println!("allocated page: {:p}", y);
-    } else {
-        println!("allocation failed");
-    }
+    let x = kallocpage().unwrap();
+
+    use alloc::boxed::Box;
+    let a = Box::new(1);
+    let b = Box::new(2);
+    let c = Box::new(3);
+    println!("{:p} {:p} {:p} {:p}", a, b, c, x);
 
     unsafe { irq::on() };
 

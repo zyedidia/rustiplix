@@ -4,41 +4,41 @@ use crate::sys;
 use alloc::alloc::{AllocError, GlobalAlloc, Layout};
 use alloc::boxed::Box;
 
-pub trait Alloc {
-    unsafe fn init(&mut self, start: *mut u8, size: usize);
-    fn alloc(&mut self, size: usize) -> *mut u8;
-    fn dealloc(&mut self, ptr: *mut u8);
+use core::ptr::NonNull;
+
+extern crate buddyalloc;
+
+use buddyalloc::Heap;
+
+struct LockedHeap<const N: usize> {
+    heap: SpinLock<Heap<N>>,
 }
 
-pub struct KernelAlloc<T: Alloc> {
-    internal: SpinLock<T>,
-}
-
-impl<T: Alloc> KernelAlloc<T> {
-    pub const fn new(val: T) -> Self {
-        Self {
-            internal: SpinLock::new(val),
-        }
-    }
-}
-
-unsafe impl<T: Alloc> GlobalAlloc for KernelAlloc<T> {
+unsafe impl<const N: usize> GlobalAlloc for LockedHeap<N> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.internal.lock().alloc(layout.size())
+        let mut heap = self.heap.lock();
+        if let Ok(ptr) = heap.allocate(layout) {
+            return ptr;
+        }
+        return core::ptr::null_mut();
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        self.internal.lock().dealloc(ptr);
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        let mut heap = self.heap.lock();
+        heap.deallocate(ptr, layout);
     }
 }
-
-use crate::kalloc::pg::PageAlloc;
 
 #[global_allocator]
-static ALLOCATOR: KernelAlloc<PageAlloc> = KernelAlloc::new(PageAlloc::new_uninit());
+static ALLOCATOR: LockedHeap<10> = LockedHeap {
+    heap: SpinLock::new(unsafe { Heap::new_unchecked(core::ptr::null_mut(), 0) }),
+};
 
 pub unsafe fn init_alloc(start: *mut u8, size: usize) {
-    unsafe { ALLOCATOR.internal.lock().init(start, size) };
+    assert!(!start.is_null());
+    unsafe {
+        *ALLOCATOR.heap.lock() = Heap::new(NonNull::new_unchecked(start), size).unwrap();
+    }
 }
 
 pub fn kallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {

@@ -10,5 +10,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "buddyalloc"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5ded974e2422fae8075cb72650eae5b12f076e480eb44930571f6bddf325b31"
+
+[[package]]
 name = "kernel"
 version = "0.1.0"
+dependencies = [
+ "buddyalloc",
+]

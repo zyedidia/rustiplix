@@ -14,3 +14,6 @@ kernel = []
 monitor = []
 virt = []
 visionfive2 = []
+
+[dependencies]
+buddyalloc = "0.1.5"
