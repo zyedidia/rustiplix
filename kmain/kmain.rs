@@ -2,7 +2,7 @@ use kernel::arch::fwi::wake_cores;
 use kernel::arch::timer;
 use kernel::arch::trap::irq;
 use kernel::cpu::cpu;
-use kernel::kalloc::global::{init_alloc, kallocpage};
+use kernel::kalloc::{init_alloc, kallocpage};
 use kernel::println;
 
 fn heap_start() -> *mut u8 {

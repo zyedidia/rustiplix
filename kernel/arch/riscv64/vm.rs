@@ -1,5 +1,5 @@
 use crate::bit::Bit;
-use crate::kalloc::global::{kfree, zalloc_raw};
+use crate::kalloc::{kfree, zalloc_raw};
 use crate::sys;
 use crate::vm::{ka2pa, pa2ka, perm};
 use core::arch::asm;
