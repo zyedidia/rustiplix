@@ -1,5 +1,8 @@
 mod kr;
 
+#[macro_use]
+pub mod place;
+
 use crate::sync::spinlock::SpinLock;
 use crate::sys;
 
