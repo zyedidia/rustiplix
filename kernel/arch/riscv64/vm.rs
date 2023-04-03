@@ -119,15 +119,15 @@ impl Pagetable {
                     return None;
                 }
                 // Allocate an internal pagetable. This pagetable is not owned by anything that
-                // Rust knows about (it is owned by the hardware), so we have to manually allocate
-                // (and free it) using raw pointers.
+                // Rust knows about (it is owned by the hardware), so we have to manually
+                // allocate/free it using raw pointers.
                 let pt = match zalloc_raw::<Pagetable>() {
                     None => {
                         return None;
                     }
                     Some(pt) => pt,
                 };
-                pte.set_pa(ka2pa(pt.addr().get()));
+                pte.set_pa(ka2pa(pt.as_ptr() as usize));
                 pte.set_valid(1);
             }
         }
