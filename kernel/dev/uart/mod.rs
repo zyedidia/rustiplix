@@ -21,17 +21,27 @@ impl<T: Uart> UartWrapper<T> {
     pub const fn new(base: *mut T) -> Self {
         Self { base }
     }
+}
 
-    pub fn device(&mut self) -> &mut T {
-        unsafe { &mut *(self.base as *mut T) }
+use core::ops::{Deref, DerefMut};
+
+impl<T: Uart> Deref for UartWrapper<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        unsafe { &*self.base }
+    }
+}
+
+impl<T: Uart> DerefMut for UartWrapper<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { &mut *self.base }
     }
 }
 
 impl<T: Uart> Write for UartWrapper<T> {
     fn write_str(&mut self, s: &str) -> Result<(), Error> {
-        let uart = self.device();
         for c in s.bytes() {
-            uart.tx(c);
+            self.tx(c);
         }
         Ok(())
     }

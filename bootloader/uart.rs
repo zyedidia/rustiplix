@@ -48,6 +48,8 @@ fn tx_u32<U: Uart>(u: u32, uart: &mut U) {
     uart.tx((u >> 24) as u8);
 }
 
+use core::ops::DerefMut;
+
 pub fn recv() -> BootData {
     extern "C" {
         static mut _heap_start: u8;
@@ -56,7 +58,7 @@ pub fn recv() -> BootData {
     let heap = unsafe { &mut _heap_start as *mut u8 };
 
     let mut guard = board::UART.lock();
-    let uart = guard.device();
+    let uart = guard.deref_mut().deref_mut();
     loop {
         tx_u32(BootFlags::GetProgInfo as u32, uart);
         timer::delay_us(100 * 1000);

@@ -1,10 +1,9 @@
 pub mod panic;
 
-use core::arch::asm;
+use core::hint::black_box;
 
+#[inline(never)]
 #[no_mangle]
 pub extern "C" fn mark() {
-    unsafe {
-        asm!("nop");
-    }
+    black_box(());
 }
