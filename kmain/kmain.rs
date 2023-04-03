@@ -1,9 +1,16 @@
+use alloc::boxed::Box;
+use core::ptr::addr_of_mut;
 use kernel::arch::fwi::wake_cores;
 use kernel::arch::timer;
 use kernel::arch::trap::irq;
 use kernel::cpu::cpu;
 use kernel::kalloc::{init_alloc, kallocpage};
 use kernel::println;
+
+struct Foo {
+    i: i64,
+    data: [u64; 4096],
+}
 
 fn heap_start() -> *mut u8 {
     unsafe {
@@ -35,11 +42,14 @@ pub extern "C" fn kmain() {
 
     let x = kallocpage().unwrap();
 
-    use alloc::boxed::Box;
-    let a = Box::new(1);
-    let b = Box::new(2);
-    let c = Box::new(3);
-    println!("{:p} {:p} {:p} {:p}", a, b, c, x);
+    let f = unsafe {
+        let mut buf = Box::<Foo>::new_uninit();
+        let f = buf.as_mut_ptr();
+        addr_of_mut!((*f).i).write(10);
+        buf.assume_init()
+    };
+
+    println!("{:p}", f);
 
     unsafe { irq::on() };
 
