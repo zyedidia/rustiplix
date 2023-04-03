@@ -50,3 +50,26 @@ pub fn zallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
     let page = Box::<[u8; sys::PAGESIZE]>::try_new_zeroed()?;
     unsafe { Ok(page.assume_init()) }
 }
+
+pub fn zalloc_raw<T>() -> Option<NonNull<T>> {
+    let val = unsafe { ALLOCATOR.alloc(Layout::new::<T>()) as *mut T };
+    if val == core::ptr::null_mut() {
+        return None;
+    }
+    unsafe {
+        core::intrinsics::write_bytes(val, 0, core::mem::size_of::<T>());
+        Some(NonNull::new_unchecked(val))
+    }
+}
+
+pub unsafe fn kfree<T>(ptr: *mut T) {
+    ALLOCATOR.dealloc(ptr as *mut u8, Layout::new::<T>());
+}
+
+use core::mem::MaybeUninit;
+
+pub fn kalloc<T>(init: fn(&mut MaybeUninit<T>)) -> Result<Box<T>, AllocError> {
+    let mut val = Box::<T>::try_new_uninit()?;
+    init(&mut val);
+    unsafe { Ok(val.assume_init()) }
+}

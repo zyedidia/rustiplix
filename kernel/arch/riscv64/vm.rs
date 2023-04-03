@@ -1,8 +1,11 @@
 use crate::bit::Bit;
+use crate::kalloc::global::{kfree, zalloc_raw};
 use crate::sys;
-use crate::vm::perm;
+use crate::vm::{ka2pa, pa2ka, perm};
 use core::arch::asm;
 
+// TODO: should this be an enum or just usize constants?
+#[derive(Copy, Clone)]
 pub enum PtLevel {
     Normal = 0,
     Mega = 1,
@@ -82,8 +85,8 @@ impl Pte {
     }
 }
 
-fn vpn(level: PtLevel, va: usize) -> usize {
-    (va >> (12 + 9 * level as usize)) & usize::mask(9)
+fn vpn(level: usize, va: usize) -> usize {
+    (va >> (12 + 9 * level)) & usize::mask(9)
 }
 
 #[repr(align(4096))]
@@ -98,12 +101,74 @@ impl Pagetable {
         }
     }
 
-    pub fn walk(&mut self, va: usize, endlevel: PtLevel) -> Option<&mut Pte> {
-        None
+    pub fn walk<const ALLOC: bool>(
+        &mut self,
+        va: usize,
+        endlevel: PtLevel,
+    ) -> Option<(*mut Pte, PtLevel)> {
+        let mut pt = self;
+        for level in (0..=endlevel as usize).rev() {
+            let pte = &mut pt.ptes[vpn(level, va)];
+            if pte.leaf() {
+                // TODO: level should be `level`, not PtLevel::Normal.
+                return Some((pte, PtLevel::Normal));
+            } else if pte.valid() != 0 {
+                pt = unsafe { &mut *(pa2ka(pte.pa()) as *mut Pagetable) };
+            } else {
+                if !ALLOC {
+                    return None;
+                }
+                // Allocate an internal pagetable. This pagetable is not owned by anything that
+                // Rust knows about (it is owned by the hardware), so we have to manually allocate
+                // (and free it) using raw pointers.
+                let pt = match zalloc_raw::<Pagetable>() {
+                    None => {
+                        return None;
+                    }
+                    Some(pt) => pt,
+                };
+                pte.set_pa(ka2pa(pt.addr().get()));
+                pte.set_valid(1);
+            }
+        }
+        Some((&mut pt.ptes[vpn(endlevel as usize, va)], endlevel))
+    }
+
+    fn free(&mut self, level: usize) {
+        // Iterate over internal pagetables and recursively call free and manually free the
+        // un-owned pointers.
+        for i in 0..self.ptes.len() {
+            let pte = &mut self.ptes[i];
+            if pte.valid() != 0 && pte.leaf() {
+                pte.data = 0;
+            } else if pte.valid() != 0 {
+                let pt = unsafe { &mut *(pa2ka(pte.pa()) as *mut Pagetable) };
+                pt.free(level - 1);
+
+                unsafe {
+                    kfree(pt);
+                }
+
+                pte.data = 0;
+            }
+        }
+    }
+
+    pub fn map(&mut self, va: usize, pa: usize, level: PtLevel, perm: u8) -> bool {
+        let pte = match self.walk::<true>(va, level) {
+            None => {
+                return false;
+            }
+            Some((pte, _)) => unsafe { &mut *pte },
+        };
+        pte.set_pa(pa);
+        pte.set_perm(perm);
+        pte.validate();
+        true
     }
 
     pub fn map_giga(&mut self, va: usize, pa: usize, perm: u8) {
-        let vpn = vpn(PtLevel::Giga, va);
+        let vpn = vpn(PtLevel::Giga as usize, va);
         self.ptes[vpn].set_perm(perm);
         self.ptes[vpn].set_pa(pa);
         self.ptes[vpn].validate();
@@ -120,6 +185,12 @@ impl Pagetable {
             PtLevel::Mega => 1024 * 1024 * 2,
             PtLevel::Giga => 1024 * 1024 * 1024,
         }
+    }
+}
+
+impl Drop for Pagetable {
+    fn drop(&mut self) {
+        self.free(PtLevel::Giga as usize);
     }
 }
 
