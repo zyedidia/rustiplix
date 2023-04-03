@@ -4,12 +4,29 @@ use crate::sys;
 use crate::vm::{ka2pa, pa2ka, perm};
 use core::arch::asm;
 
-// TODO: should this be an enum or just usize constants?
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum PtLevel {
     Normal = 0,
     Mega = 1,
     Giga = 2,
+}
+
+impl PtLevel {
+    pub fn size(self) -> usize {
+        match self {
+            Self::Normal => 4096,
+            Self::Mega => 1024 * 1024 * 2,
+            Self::Giga => 1024 * 1024 * 1024,
+        }
+    }
+
+    pub fn next(self) -> PtLevel {
+        match self {
+            Self::Normal => Self::Normal,
+            Self::Mega => Self::Normal,
+            Self::Giga => Self::Mega,
+        }
+    }
 }
 
 const SV39: usize = 8;
@@ -107,11 +124,11 @@ impl Pagetable {
         endlevel: PtLevel,
     ) -> Option<(*mut Pte, PtLevel)> {
         let mut pt = self;
-        for level in (0..=endlevel as usize).rev() {
-            let pte = &mut pt.ptes[vpn(level, va)];
+        let mut level = PtLevel::Giga;
+        while level != endlevel {
+            let pte = &mut pt.ptes[vpn(level as usize, va)];
             if pte.leaf() {
-                // TODO: level should be `level`, not PtLevel::Normal.
-                return Some((pte, PtLevel::Normal));
+                return Some((pte, level));
             } else if pte.valid() != 0 {
                 pt = unsafe { &mut *(pa2ka(pte.pa()) as *mut Pagetable) };
             } else {
@@ -130,6 +147,7 @@ impl Pagetable {
                 pte.set_pa(ka2pa(pt.as_ptr() as usize));
                 pte.set_valid(1);
             }
+            level = level.next();
         }
         Some((&mut pt.ptes[vpn(endlevel as usize, va)], endlevel))
     }
@@ -155,6 +173,7 @@ impl Pagetable {
     }
 
     pub fn map(&mut self, va: usize, pa: usize, level: PtLevel, perm: u8) -> bool {
+        assert!(perm != 0);
         let pte = match self.walk::<true>(va, level) {
             None => {
                 return false;
@@ -168,6 +187,7 @@ impl Pagetable {
     }
 
     pub fn map_giga(&mut self, va: usize, pa: usize, perm: u8) {
+        assert!(perm != 0);
         let vpn = vpn(PtLevel::Giga as usize, va);
         self.ptes[vpn].set_perm(perm);
         self.ptes[vpn].set_pa(pa);
@@ -177,14 +197,6 @@ impl Pagetable {
     pub fn satp(&self) -> usize {
         let pn = &self.ptes[0] as *const _ as usize / sys::PAGESIZE;
         pn.set_bits(63, 60, SV39)
-    }
-
-    pub fn level2size(level: PtLevel) -> usize {
-        match level {
-            PtLevel::Normal => 4096,
-            PtLevel::Mega => 1024 * 1024 * 2,
-            PtLevel::Giga => 1024 * 1024 * 1024,
-        }
     }
 }
 

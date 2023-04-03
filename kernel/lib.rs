@@ -3,6 +3,7 @@
 #![feature(alloc_error_handler)]
 #![feature(allocator_api)]
 #![feature(new_uninit)]
+#![feature(raw_ref_op)]
 
 #[cfg(all(feature = "kernel", feature = "monitor"))]
 compile_error!("feature \"kernel\" and feature \"monitor\" cannot be enabled at the same time");

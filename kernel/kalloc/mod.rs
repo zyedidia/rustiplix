@@ -53,6 +53,11 @@ pub fn zallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
     unsafe { Ok(page.assume_init()) }
 }
 
+pub fn zalloc<T>() -> Result<Box<T>, AllocError> {
+    let val = Box::<T>::try_new_zeroed()?;
+    unsafe { Ok(val.assume_init()) }
+}
+
 pub fn zalloc_raw<T>() -> Option<NonNull<T>> {
     let val = unsafe { ALLOCATOR.alloc(Layout::new::<T>()) as *mut T };
     if val == core::ptr::null_mut() {

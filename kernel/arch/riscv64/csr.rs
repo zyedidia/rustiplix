@@ -12,7 +12,7 @@ macro_rules! csr {
         }
         #[cfg(not(target_arch = "riscv64"))]
         {
-            panic!("This macro can only be used on RISC-V platforms");
+            compiler_error!("This macro can only be used on RISC-V platforms");
         }
     }};
 
@@ -28,7 +28,7 @@ macro_rules! csr {
         }
         #[cfg(not(target_arch = "riscv64"))]
         {
-            panic!("This macro can only be used on RISC-V platforms");
+            compiler_error!("This macro can only be used on RISC-V platforms");
         }
     }};
 }
