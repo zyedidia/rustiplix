@@ -41,7 +41,7 @@ impl Proc {
     }
 
     pub fn kstackp(p: *mut Self) -> *const u8 {
-        unsafe { &raw const (*p).kstack.0[0] }
+        unsafe { (*p).kstack.0.as_ptr() }
     }
 }
 

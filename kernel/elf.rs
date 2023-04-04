@@ -44,7 +44,7 @@ struct ProgHeader64 {
 pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
     // The elf data must be properly aligned.
     assert!(&elfdat[0] as *const _ as usize % 8 == 0);
-    let elf: &FileHeader64 = unsafe { &*(&raw const elfdat[0] as *const FileHeader64) };
+    let elf: &FileHeader64 = unsafe { &*(elfdat.as_ptr() as *const FileHeader64) };
 
     if elf.magic != MAGIC {
         return None;
@@ -54,7 +54,7 @@ pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
 
     for i in 0..elf.phnum {
         let off = elf.phoff as usize + i as usize * core::mem::size_of::<ProgHeader64>();
-        let ph: &ProgHeader64 = unsafe { &*(&raw const elfdat[off] as *const ProgHeader64) };
+        let ph: &ProgHeader64 = unsafe { &*(elfdat.as_ptr().add(off) as *const ProgHeader64) };
         if ph.type_ != PROG_LOAD || ph.memsz == 0 {
             continue;
         }
