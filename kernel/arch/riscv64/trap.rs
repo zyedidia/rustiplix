@@ -74,14 +74,32 @@ pub extern "C" fn usertrap(p: *mut Proc) {
         csr!(scause)
     );
 
-    unsafe { usertrapret(p) };
+    let cause = csr!(scause);
+
+    match cause {
+        cause::ECALL_U => unsafe {
+            csr!(sepc = csr!(sepc) + 4);
+            panic!("ecall: {:p}", (*p).data.pt);
+        },
+        _ => {
+            panic!(
+                "[unhandled] usertrap: core: {}: cause: {:#x}, epc: {:#x}, tval: {:#x}",
+                cpu().coreid,
+                cause,
+                csr!(sepc),
+                csr!(stval)
+            );
+        }
+    }
+
+    // unsafe { usertrapret(p) };
 }
 
 use super::csr::sstatus;
 use super::vm::vm_fence;
 use crate::bit::Bit;
 
-unsafe fn usertrapret(p: *mut Proc) -> ! {
+pub unsafe fn usertrapret(p: *mut Proc) -> ! {
     irq::off();
 
     csr!(stvec = uservec);

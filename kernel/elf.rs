@@ -77,14 +77,13 @@ pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
                 Ok(mem) => mem,
             };
             unsafe { write_bytes(mem.as_mut_ptr(), 0, pad as usize) };
-            // TODO: mem += pad?
             let mut written = pad as usize;
             pad = 0;
             let soff = va - ph.vaddr;
             if ph.filesz > soff {
                 // Haven't yet reached ph.filesz, so there is more data from the ELF file to copy
                 // in.
-                let n = min(sys::PAGESIZE - written, ph.filesz as usize - off);
+                let n = min(sys::PAGESIZE - written, (ph.filesz - soff) as usize);
                 let data_start = ph.offset as usize + soff as usize;
                 let data_end = data_start + n;
                 mem[written..written + n].copy_from_slice(&elfdat[data_start..data_end]);

@@ -26,6 +26,7 @@ pub struct ProcData {
 pub struct Proc {
     pub trapframe: Trapframe,
     pub data: ProcData,
+    canary: u64,
     kstack: KStack,
 }
 
@@ -85,7 +86,10 @@ impl Proc {
     }
 
     pub fn kstackp(p: *mut Self) -> *const u8 {
-        unsafe { (*p).kstack.0.as_ptr() }
+        unsafe {
+            let len = (*p).kstack.0.len();
+            (*p).kstack.0.as_ptr().add(len - 16)
+        }
     }
 }
 

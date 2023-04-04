@@ -123,7 +123,7 @@ impl Pagetable {
         &mut self,
         va: usize,
         endlevel: PtLevel,
-    ) -> Option<(*mut Pte, PtLevel)> {
+    ) -> Option<(&mut Pte, PtLevel)> {
         let mut pt = self;
         let mut level = PtLevel::Giga;
         while level != endlevel {
@@ -140,14 +140,15 @@ impl Pagetable {
                 // pagetable via the physical address that gets stored in the PTE. Since this
                 // ownership information is not available to Rust, we have to manage it manually
                 // with raw pointers.
-                let pt = match zalloc_raw::<Pagetable>() {
+                let lower = match zalloc_raw::<Pagetable>() {
                     None => {
                         return None;
                     }
                     Some(pt) => pt,
                 };
-                pte.set_pa(ka2pa(pt.as_ptr() as usize));
+                pte.set_pa(ka2pa(lower.as_ptr() as usize));
                 pte.set_valid(1);
+                unsafe { pt = &mut *lower.as_ptr() };
             }
             level = level.next();
         }
@@ -180,7 +181,7 @@ impl Pagetable {
             None => {
                 return false;
             }
-            Some((pte, _)) => unsafe { &mut *pte },
+            Some((pte, _)) => pte,
         };
         pte.set_pa(pa);
         pte.set_perm(perm);
@@ -197,7 +198,7 @@ impl Pagetable {
     }
 
     pub fn satp(&self) -> usize {
-        let pn = &self.ptes[0] as *const _ as usize / sys::PAGESIZE;
+        let pn = ka2pa(&self.ptes[0] as *const _ as usize) / sys::PAGESIZE;
         pn.set_bits(63, 60, SV39)
     }
 }
