@@ -61,7 +61,7 @@ pub struct Trapframe {
 use crate::proc::Proc;
 
 extern "C" {
-    fn userret(p: &mut Trapframe) -> !;
+    fn userret(p: *mut Trapframe) -> !;
     fn uservec();
 }
 
@@ -100,5 +100,5 @@ unsafe fn usertrapret(p: *mut Proc) -> ! {
     csr!(satp = (*p).data.pt.satp());
     vm_fence();
 
-    userret(&mut (*p).trapframe);
+    userret(&raw mut (*p).trapframe);
 }

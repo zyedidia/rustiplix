@@ -1,4 +1,5 @@
 #[repr(C)]
+#[derive(Default)]
 pub struct Regs {
     pub ra: u64,
     pub sp: u64,

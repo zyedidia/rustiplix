@@ -173,6 +173,7 @@ impl Pagetable {
         }
     }
 
+    #[must_use]
     pub fn map(&mut self, va: usize, pa: usize, level: PtLevel, perm: u8) -> bool {
         assert!(perm != 0);
         let pte = match self.walk::<true>(va, level) {
