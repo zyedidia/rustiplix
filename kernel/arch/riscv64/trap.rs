@@ -49,13 +49,14 @@ pub extern "C" fn kerneltrap() {
 
 use super::regs::{rd_gp, rd_tp, Regs};
 
+#[derive(Default)]
 #[repr(C)]
 pub struct Trapframe {
     ktp: u64,
     ksp: u64,
     kgp: u64,
-    epc: usize,
-    regs: Regs,
+    pub epc: usize,
+    pub regs: Regs,
 }
 
 use crate::proc::Proc;

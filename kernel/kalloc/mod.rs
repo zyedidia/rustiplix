@@ -48,6 +48,11 @@ pub fn kallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
     unsafe { Ok(page.assume_init()) }
 }
 
+pub fn zallocsz(size: usize) -> Result<Box<[u8]>, AllocError> {
+    let data = Box::<[u8]>::try_new_zeroed_slice(size)?;
+    unsafe { Ok(data.assume_init()) }
+}
+
 pub fn zallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
     let page = Box::<[u8; sys::PAGESIZE]>::try_new_zeroed()?;
     unsafe { Ok(page.assume_init()) }

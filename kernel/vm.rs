@@ -8,6 +8,7 @@ pub mod perm {
     pub const COW: u8 = 1 << 4;
     pub const RWX: u8 = READ | WRITE | EXEC;
     pub const URWX: u8 = USER | RWX;
+    pub const URW: u8 = USER | READ | WRITE;
 }
 
 #[inline]

@@ -73,8 +73,8 @@ pub fn init_kernel(primary: bool) {
         // If primary core, create mappings for the initial pagetable.
         let map_giga = |pa: usize| unsafe {
             let pt = PAGETABLE.get_mut();
-            pt.map_giga(pa, pa, perm::READ | perm::WRITE | perm::EXEC);
-            pt.map_giga(pa2hka(pa), pa, perm::READ | perm::WRITE | perm::EXEC);
+            pt.map_giga(pa, pa, perm::RWX);
+            pt.map_giga(pa2hka(pa), pa, perm::RWX);
         };
 
         for mem in machine::MEM_RANGES {

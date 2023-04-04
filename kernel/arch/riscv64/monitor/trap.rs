@@ -30,15 +30,15 @@ pub extern "C" fn monitortrap(regs: &mut Regs) {
 
 fn fwi_handler(regs: &mut Regs) {
     match regs.a7 {
-        x if x == Func::WakeCores as u64 => {
+        x if x == Func::WakeCores as usize => {
             wake_cores();
         }
-        x if x == Func::SetTimer as u64 => {
-            set_timer(regs.a0);
+        x if x == Func::SetTimer as usize => {
+            set_timer(regs.a0 as u64);
         }
         _ => {
             // error
-            regs.a0 = u64::MAX;
+            regs.a0 = usize::MAX;
             return;
         }
     }

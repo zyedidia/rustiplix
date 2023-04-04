@@ -10,7 +10,7 @@ local prefix := riscv64-unknown-elf
 local target := riscv64imac-unknown-none-elf
 local objdir = ".obj/"
 
-local tools = {
+tools = {
     cc := $prefix-gcc
     as := $prefix-as
     ld := $prefix-ld
@@ -18,9 +18,11 @@ local tools = {
     objdump := $prefix-objdump
     qemu := qemu-system-riscv64
     gdb := gdb-multiarch
+    strip := $prefix-strip
 }
 
-local flags = {
+flags = {
+    cc := -march=rv64imac_zicsr_zifencei -mcmodel=medany -mabi=lp64 -Os
     as := -march=rv64imac_zicsr_zifencei -xassembler-with-cpp -mcmodel=medany -mabi=lp64
     qemu := -nographic -no-reboot -bios none -machine virt -m 2G -smp 4
     objdump := -j .text -j .data -j .rodata -j .bss -j .stack -j .heap -j .payload -d
@@ -135,4 +137,6 @@ return b{
         knit -t clean
         cargo -C kmain clean $(flags.cargo.base)
         cargo -C bootloader clean $(flags.cargo.base)
+
+    include("user/hello/build.knit"),
 }

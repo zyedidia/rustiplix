@@ -1,7 +1,7 @@
 use crate::bit::Bit;
 use crate::kalloc::{kfree, zalloc_raw};
 use crate::sys;
-use crate::vm::{ka2pa, pa2ka, perm};
+use crate::vm::{ka2pa, pa2hka, pa2ka, perm};
 use core::arch::asm;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -212,5 +212,15 @@ impl Drop for Pagetable {
 pub fn vm_fence() {
     unsafe {
         asm!("sfence.vma");
+    }
+}
+
+use crate::board::machine;
+
+pub fn kernel_procmap(pt: &mut Pagetable) {
+    for mem in machine::MEM_RANGES {
+        for pa in (mem.start..mem.start + mem.size).step_by(sys::gb(1) as usize) {
+            pt.map_giga(pa2hka(pa), pa, perm::RWX);
+        }
     }
 }
