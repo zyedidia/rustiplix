@@ -27,6 +27,7 @@ pub mod crc;
 pub mod dev;
 pub mod kalloc;
 pub mod primary;
+pub mod proc;
 pub mod start;
 pub mod sync;
 pub mod sys;

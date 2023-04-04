@@ -107,6 +107,7 @@ fn vpn(level: usize, va: usize) -> usize {
 }
 
 #[repr(align(4096))]
+#[repr(C)]
 pub struct Pagetable {
     ptes: [Pte; 512],
 }
@@ -135,9 +136,10 @@ impl Pagetable {
                 if !ALLOC {
                     return None;
                 }
-                // Allocate an internal pagetable. This pagetable is not owned by anything that
-                // Rust knows about (it is owned by the hardware), so we have to manually
-                // allocate/free it using raw pointers.
+                // Allocate an internal pagetable. This internal pagetable is owned by the current
+                // pagetable via the physical address that gets stored in the PTE. Since this
+                // ownership information is not available to Rust, we have to manage it manually
+                // with raw pointers.
                 let pt = match zalloc_raw::<Pagetable>() {
                     None => {
                         return None;
@@ -153,8 +155,7 @@ impl Pagetable {
     }
 
     fn free(&mut self, level: usize) {
-        // Iterate over internal pagetables and recursively call free and manually free the
-        // un-owned pointers.
+        // Iterate over internal pagetables and recursively free the raw pointers.
         for i in 0..self.ptes.len() {
             let pte = &mut self.ptes[i];
             if pte.valid() != 0 && pte.leaf() {

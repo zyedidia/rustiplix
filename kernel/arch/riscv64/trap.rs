@@ -7,7 +7,7 @@ pub mod irq {
             fn kernelvec();
         }
 
-        csr!(stvec = kernelvec as usize);
+        csr!(stvec = kernelvec);
     }
 
     pub unsafe fn on() {
@@ -45,4 +45,60 @@ pub extern "C" fn kerneltrap() {
             csr!(stval)
         );
     }
+}
+
+use super::regs::{rd_gp, rd_tp, Regs};
+
+#[repr(C)]
+pub struct Trapframe {
+    ktp: u64,
+    ksp: u64,
+    kgp: u64,
+    epc: usize,
+    regs: Regs,
+}
+
+use crate::proc::Proc;
+
+extern "C" {
+    fn userret(p: &mut Trapframe) -> !;
+    fn uservec();
+}
+
+#[no_mangle]
+pub extern "C" fn usertrap(p: *mut Proc) {
+    println!(
+        "[user trap] epc: {:#x}, cause: {:#x}",
+        csr!(sepc),
+        csr!(scause)
+    );
+
+    unsafe { usertrapret(p) };
+}
+
+use super::csr::sstatus;
+use super::vm::vm_fence;
+use crate::bit::Bit;
+
+unsafe fn usertrapret(p: *mut Proc) -> ! {
+    irq::off();
+
+    csr!(stvec = uservec);
+
+    // Set up trapframe.
+    (*p).trapframe.ktp = rd_tp();
+    (*p).trapframe.ksp = Proc::kstackp(p) as u64;
+    (*p).trapframe.kgp = rd_gp();
+    csr!(sscratch = p);
+
+    csr!(
+        sstatus = csr!(sstatus)
+            .set_bit(sstatus::SPP, false) // force return to user mode
+            .set_bit(sstatus::SPIE, true) // enable interrupts in user mode
+    );
+    csr!(sepc = (*p).trapframe.epc);
+    csr!(satp = (*p).data.pt.satp());
+    vm_fence();
+
+    userret(&mut (*p).trapframe);
 }
