@@ -7,6 +7,15 @@
 
 #include "syslib.h"
 
+void delay_cycles() {
+    for (int i = 0; i < 1000000000; i++) {
+        asm volatile ("nop");
+    }
+}
+
 int main() {
-    return getpid();
+    while (1) {
+        getpid();
+        delay_cycles();
+    }
 }

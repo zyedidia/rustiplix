@@ -24,6 +24,7 @@ pub mod irq {
 }
 
 use crate::arch::riscv64::csr::cause;
+use crate::arch::riscv64::timer;
 use crate::cpu::cpu;
 
 #[no_mangle]
@@ -34,7 +35,6 @@ pub extern "C" fn kerneltrap() {
     println!("[kernel trap] sepc: {:#x}, cause: {:#x}", sepc, scause,);
 
     if scause == cause::STI {
-        use crate::arch::riscv64::timer;
         timer::intr(timer::TIME_SLICE_US);
     } else {
         panic!(
@@ -68,19 +68,22 @@ extern "C" {
 
 #[no_mangle]
 pub extern "C" fn usertrap(p: *mut Proc) {
-    println!(
-        "[user trap] epc: {:#x}, cause: {:#x}",
-        csr!(sepc),
-        csr!(scause)
-    );
+    // println!(
+    //     "[user trap] epc: {:#x}, cause: {:#x}",
+    //     csr!(sepc),
+    //     csr!(scause)
+    // );
 
     let cause = csr!(scause);
 
     match cause {
         cause::ECALL_U => unsafe {
-            csr!(sepc = csr!(sepc) + 4);
-            panic!("ecall: {:p}", (*p).data.pt);
+            println!("ecall: {}", (*p).trapframe.regs.a7);
+            (*p).trapframe.epc = csr!(sepc) + 4;
         },
+        cause::STI => {
+            timer::intr(timer::TIME_SLICE_US);
+        }
         _ => {
             panic!(
                 "[unhandled] usertrap: core: {}: cause: {:#x}, epc: {:#x}, tval: {:#x}",
@@ -92,7 +95,7 @@ pub extern "C" fn usertrap(p: *mut Proc) {
         }
     }
 
-    // unsafe { usertrapret(p) };
+    unsafe { usertrapret(p) };
 }
 
 use super::csr::sstatus;

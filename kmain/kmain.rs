@@ -50,5 +50,7 @@ pub extern "C" fn kmain() {
 
     timer::intr(timer::TIME_SLICE_US);
 
+    kernel::builtin::mark();
+
     unsafe { usertrapret(Box::<Proc>::into_raw(proc)) };
 }

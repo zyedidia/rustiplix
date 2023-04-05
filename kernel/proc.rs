@@ -37,6 +37,7 @@ impl Proc {
     pub const STACK_VA: usize = 0x7fff0000;
     pub const STACK_SIZE: usize = sys::PAGESIZE;
     pub const MAX_VA: usize = Self::STACK_VA + Self::STACK_SIZE;
+    pub const CANARY: u64 = 0xfeedface_deadbeef;
 
     pub fn new_boxed(bin: &[u8]) -> Option<Box<Proc>> {
         let mut pt = match zalloc::<Pagetable>() {
@@ -79,6 +80,7 @@ impl Proc {
                 nchild: 0,
                 state: ProcState::Runnable,
             });
+            addr_of_mut!((*proc).canary).write(Self::CANARY);
             data.assume_init()
         };
 
@@ -90,6 +92,10 @@ impl Proc {
             let len = (*p).kstack.0.len();
             (*p).kstack.0.as_ptr().add(len - 16)
         }
+    }
+
+    pub fn check_stack(&mut self) {
+        assert!(self.canary == Self::CANARY);
     }
 }
 

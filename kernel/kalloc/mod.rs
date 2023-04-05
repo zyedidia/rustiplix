@@ -43,6 +43,8 @@ pub unsafe fn init_alloc(start: *mut u8, size: usize) {
     }
 }
 
+pub trait Zero {}
+
 pub fn kallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
     let page = Box::<[u8; sys::PAGESIZE]>::try_new_uninit()?;
     unsafe { Ok(page.assume_init()) }
@@ -58,12 +60,12 @@ pub fn zallocpage() -> Result<Box<[u8; sys::PAGESIZE]>, AllocError> {
     unsafe { Ok(page.assume_init()) }
 }
 
-pub fn zalloc<T>() -> Result<Box<T>, AllocError> {
+pub fn zalloc<T: Zero>() -> Result<Box<T>, AllocError> {
     let val = Box::<T>::try_new_zeroed()?;
     unsafe { Ok(val.assume_init()) }
 }
 
-pub fn zalloc_raw<T>() -> Option<NonNull<T>> {
+pub fn zalloc_raw<T: Zero>() -> Option<NonNull<T>> {
     let val = unsafe { ALLOCATOR.alloc(Layout::new::<T>()) as *mut T };
     if val == core::ptr::null_mut() {
         return None;

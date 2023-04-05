@@ -112,6 +112,11 @@ pub struct Pagetable {
     ptes: [Pte; 512],
 }
 
+use crate::kalloc::Zero;
+
+// Mark Pagetable as valid if initialized to all zeroes.
+impl Zero for Pagetable {}
+
 impl Pagetable {
     pub const fn new() -> Self {
         Self {
