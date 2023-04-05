@@ -25,9 +25,10 @@ fn heap_start() -> *mut u8 {
 #[no_mangle]
 pub extern "C" fn kmain() {
     if cpu().primary {
+        // TODO: allocate a full heap
         unsafe { init_alloc(heap_start(), 4096 * 4096) };
-        // use kernel::arch::fwi::wake_cores;
-        // wake_cores();
+        use kernel::arch::fwi::wake_cores;
+        wake_cores();
     }
 
     irq::init();
