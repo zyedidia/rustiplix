@@ -81,7 +81,7 @@ return b{
     $ $(lib.bootloader.uart): $(src.bootloader) $(src.kernel) $(src.cargo)
         cargo -C bootloader build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features) --features uart
         cp $objdir/libbootloader.a $output
-    $ $(lib.kmain): $(src.kmain) $(src.kernel) $(src.cargo)
+    $ $(lib.kmain): $(src.kmain) $(src.kernel) $(src.cargo) user/hello/hello.elf
         cargo -C kmain build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features)
 
     $ kernel.elf: $(asm.kernel) $(asm.kmain) $(lib.kmain) $(link.kernel)[I]
