@@ -113,7 +113,7 @@ return b{
     $ prog:VB: kernel.elf $(plboot.bin)[I]
         ./$(plboot.bin) prog $input
 
-    $ clippy:VB:
+    $ clippy:VB: user/hello/hello.elf
         cargo -C kmain clippy $(flags.cargo.base) -- $(flags.clippy)
         cargo -C bootloader clippy $(flags.cargo.base) -- $(flags.clippy)
 
