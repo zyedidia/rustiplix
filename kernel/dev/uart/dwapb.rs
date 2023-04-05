@@ -21,7 +21,7 @@ impl DwApbUart {
 }
 
 impl Uart for DwApbUart {
-    fn init(&mut self, baud: u32) {}
+    fn init(&mut self, _baud: u32) {}
 
     fn tx(&mut self, b: u8) {
         // Wait for thr to be empty before writing the byte.
