@@ -14,3 +14,9 @@ pub unsafe fn rd_cpu() -> &'static mut Cpu {
 pub unsafe fn wr_cpu(cpu: &mut Cpu) {
     asm!("mv tp, {}", in(reg) cpu as *mut _ as usize);
 }
+
+pub fn wfi() {
+    unsafe {
+        asm!("wfi");
+    }
+}

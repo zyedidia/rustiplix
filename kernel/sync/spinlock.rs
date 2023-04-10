@@ -47,7 +47,7 @@ impl<T> Deref for Guard<'_, T> {
 
 impl<T> DerefMut for Guard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
-        // Safety: the existence of this Guard guaratees we own the lock.
+        // Safety: the existence of this Guard guarantees we own the lock.
         unsafe { &mut *self.lock.value.get() }
     }
 }

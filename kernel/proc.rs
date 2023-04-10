@@ -1,3 +1,4 @@
+use crate::arch::regs::Context;
 use crate::arch::trap::Trapframe;
 use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
@@ -8,8 +9,10 @@ use crate::vm::{perm, PageMap};
 use alloc::boxed::Box;
 use core::ptr::{addr_of_mut, null_mut};
 
+#[derive(PartialEq)]
 pub enum ProcState {
     Runnable,
+    Running,
     Blocked,
     Exited,
 }
@@ -20,10 +23,12 @@ pub struct ProcData {
     nchild: usize,
     parent: u32,
 
+    pub context: Context,
+
     pub next: *mut Proc,
     pub prev: *mut Proc,
 
-    state: ProcState,
+    pub state: ProcState,
 }
 
 #[repr(C)]
@@ -86,6 +91,7 @@ impl Proc {
                 parent: 0,
                 next: null_mut(),
                 prev: null_mut(),
+                context: Context::default(),
             });
             addr_of_mut!((*proc).canary).write(Self::CANARY);
             data.assume_init()

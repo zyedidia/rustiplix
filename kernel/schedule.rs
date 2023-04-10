@@ -1,15 +1,33 @@
-use crate::proc::Proc;
+use crate::arch::regs::Context;
+use crate::arch::trap::irq;
+use crate::proc::{Proc, ProcState};
+use crate::sync::spinlock::SpinLock;
+
+use alloc::boxed::Box;
 use core::ptr::null_mut;
 
+static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
+
 pub struct Queue {
+    context: Context,
     front: *mut Proc,
     back: *mut Proc,
 }
 
+unsafe impl Send for Queue {}
+
 impl Queue {
-    pub fn push_front(&mut self, n: &mut Proc) {
+    pub const fn new() -> Self {
+        Self {
+            front: null_mut(),
+            back: null_mut(),
+            context: Context::new(),
+        }
+    }
+
+    pub fn push_front(&mut self, n: Box<Proc>) {
         unsafe {
-            let n = n as *mut Proc;
+            let n = Box::<Proc>::into_raw(n);
             (*n).data.next = self.front;
             (*n).data.prev = null_mut();
             if self.front != null_mut() {
@@ -32,14 +50,51 @@ impl Queue {
             self.front = (*n).data.next;
         }
     }
-    pub fn pop_back(&mut self) -> Option<&mut Proc> {
+    pub fn pop_back(&mut self) -> Option<Box<Proc>> {
         let b = self.back;
         if b == null_mut() {
             return None;
         }
         unsafe {
             self.remove(b);
-            Some(&mut *b)
+            Some(Box::<Proc>::from_raw(b))
+        }
+    }
+}
+
+fn runnable_proc() -> Box<Proc> {
+    loop {
+        match RUN_QUEUE.lock().pop_back() {
+            None => {
+                // no runnable procs -- wait until something happens
+                crate::arch::cpu::wfi();
+            }
+            Some(proc) => {
+                return proc;
+            }
+        }
+    }
+}
+
+extern "C" {
+    fn kswitch(oldp: &mut Context, newp: &mut Context);
+}
+
+pub fn scheduler() -> ! {
+    loop {
+        let mut p = runnable_proc();
+
+        unsafe {
+            irq::off();
+            // TODO: Should release the lock before calling kswitch
+            // so that the lock is not held for the entirety of the
+            // time slice.
+            let ctx = &mut RUN_QUEUE.lock().context;
+            kswitch(ctx, &mut p.data.context);
+        }
+
+        if p.data.state == ProcState::Runnable {
+            RUN_QUEUE.lock().push_front(p);
         }
     }
 }
