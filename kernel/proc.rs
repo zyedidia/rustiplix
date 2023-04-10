@@ -6,7 +6,7 @@ use crate::sys;
 use crate::vm::{perm, PageMap};
 
 use alloc::boxed::Box;
-use core::ptr::addr_of_mut;
+use core::ptr::{addr_of_mut, null_mut};
 
 pub enum ProcState {
     Runnable,
@@ -18,6 +18,10 @@ pub struct ProcData {
     pid: u32,
     pub pt: Box<Pagetable>,
     nchild: usize,
+    parent: u32,
+
+    pub next: *mut Proc,
+    pub prev: *mut Proc,
 
     state: ProcState,
 }
@@ -75,10 +79,13 @@ impl Proc {
             let proc = data.as_mut_ptr();
             addr_of_mut!((*proc).trapframe).write(trapframe);
             addr_of_mut!((*proc).data).write(ProcData {
-                pid: 0,
+                pid: 1,
                 pt,
                 nchild: 0,
                 state: ProcState::Runnable,
+                parent: 0,
+                next: null_mut(),
+                prev: null_mut(),
             });
             addr_of_mut!((*proc).canary).write(Self::CANARY);
             data.assume_init()

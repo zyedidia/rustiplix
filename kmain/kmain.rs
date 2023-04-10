@@ -6,8 +6,6 @@ use kernel::kalloc::init_alloc;
 use kernel::println;
 use kernel::proc::Proc;
 
-use alloc::boxed::Box;
-
 struct Foo {
     i: i64,
     data: [u64; 4096],
@@ -53,5 +51,5 @@ pub extern "C" fn kmain() {
 
     kernel::builtin::mark();
 
-    unsafe { usertrapret(Box::<Proc>::into_raw(proc)) };
+    unsafe { usertrapret(proc) };
 }

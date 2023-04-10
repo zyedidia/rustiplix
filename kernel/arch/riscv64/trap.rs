@@ -26,6 +26,7 @@ pub mod irq {
 use crate::arch::riscv64::csr::cause;
 use crate::arch::riscv64::timer;
 use crate::cpu::cpu;
+use alloc::boxed::Box;
 
 #[no_mangle]
 pub extern "C" fn kerneltrap() {
@@ -68,6 +69,8 @@ extern "C" {
 
 #[no_mangle]
 pub extern "C" fn usertrap(p: *mut Proc) {
+    let mut p = unsafe { Box::<Proc>::from_raw(p) };
+
     // println!(
     //     "[user trap] epc: {:#x}, cause: {:#x}",
     //     csr!(sepc),
@@ -77,10 +80,10 @@ pub extern "C" fn usertrap(p: *mut Proc) {
     let cause = csr!(scause);
 
     match cause {
-        cause::ECALL_U => unsafe {
-            println!("ecall: {}", (*p).trapframe.regs.a7);
-            (*p).trapframe.epc = csr!(sepc) + 4;
-        },
+        cause::ECALL_U => {
+            println!("ecall: {}", p.trapframe.regs.a7);
+            p.trapframe.epc = csr!(sepc) + 4;
+        }
         cause::STI => {
             timer::intr(timer::TIME_SLICE_US);
         }
@@ -102,7 +105,9 @@ use super::csr::sstatus;
 use super::vm::vm_fence;
 use crate::bit::Bit;
 
-pub unsafe fn usertrapret(p: *mut Proc) -> ! {
+pub unsafe fn usertrapret(p: Box<Proc>) -> ! {
+    let p = Box::<Proc>::into_raw(p);
+
     irq::off();
 
     csr!(stvec = uservec);
