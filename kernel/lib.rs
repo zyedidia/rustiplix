@@ -33,5 +33,6 @@ pub mod schedule;
 pub mod start;
 pub mod sync;
 pub mod sys;
+pub mod syscall;
 pub mod timer;
 pub mod vm;

@@ -61,6 +61,7 @@ pub struct Trapframe {
 }
 
 use crate::proc::Proc;
+use crate::syscall::syscall;
 
 extern "C" {
     fn userret(p: *mut Trapframe) -> !;
@@ -81,11 +82,13 @@ pub extern "C" fn usertrap(p: *mut Proc) {
 
     match cause {
         cause::ECALL_U => {
-            println!("ecall: {}", p.trapframe.regs.a7);
+            let sysno = p.trapframe.regs.a7;
+            p.trapframe.regs.a0 = syscall(&mut p, sysno) as usize;
             p.trapframe.epc = csr!(sepc) + 4;
         }
         cause::STI => {
             timer::intr(timer::TIME_SLICE_US);
+            p.yield_();
         }
         _ => {
             panic!(
@@ -98,16 +101,14 @@ pub extern "C" fn usertrap(p: *mut Proc) {
         }
     }
 
-    unsafe { usertrapret(p) };
+    unsafe { usertrapret(Box::<Proc>::into_raw(p)) };
 }
 
 use super::csr::sstatus;
 use super::vm::vm_fence;
 use crate::bit::Bit;
 
-pub unsafe fn usertrapret(p: Box<Proc>) -> ! {
-    let p = Box::<Proc>::into_raw(p);
-
+pub unsafe fn usertrapret(p: *mut Proc) -> ! {
     irq::off();
 
     csr!(stvec = uservec);

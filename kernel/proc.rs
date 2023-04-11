@@ -9,6 +9,10 @@ use crate::vm::{perm, PageMap};
 use alloc::boxed::Box;
 use core::ptr::{addr_of_mut, null_mut};
 
+use core::sync::atomic::{AtomicU32, Ordering};
+
+static NEXTPID: AtomicU32 = AtomicU32::new(1);
+
 #[derive(PartialEq)]
 pub enum ProcState {
     Runnable,
@@ -18,7 +22,7 @@ pub enum ProcState {
 }
 
 pub struct ProcData {
-    pid: u32,
+    pub pid: u32,
     pub pt: Box<Pagetable>,
     nchild: usize,
     parent: u32,
@@ -84,7 +88,7 @@ impl Proc {
             let proc = data.as_mut_ptr();
             addr_of_mut!((*proc).trapframe).write(trapframe);
             addr_of_mut!((*proc).data).write(ProcData {
-                pid: 1,
+                pid: NEXTPID.fetch_add(1, Ordering::Relaxed),
                 pt,
                 nchild: 0,
                 state: ProcState::Runnable,
@@ -116,8 +120,16 @@ impl Proc {
         assert!(self.canary == Self::CANARY);
     }
 
+    pub fn yield_(&mut self) {
+        use crate::arch::trap::irq;
+        use crate::schedule::{kswitch, CONTEXT};
+        assert!(!irq::enabled());
+
+        unsafe { kswitch(&mut self.data.context, &mut CONTEXT) }
+    }
+
     pub unsafe extern "C" fn forkret(proc: *mut Proc) {
-        usertrapret(Box::<Proc>::from_raw(proc));
+        usertrapret(proc);
     }
 }
 

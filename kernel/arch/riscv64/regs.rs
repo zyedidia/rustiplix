@@ -34,6 +34,18 @@ pub struct Regs {
     pub t6: usize,
 }
 
+impl Regs {
+    pub fn arg0(&self) -> usize {
+        self.a0
+    }
+    pub fn arg1(&self) -> usize {
+        self.a1
+    }
+    pub fn arg2(&self) -> usize {
+        self.a2
+    }
+}
+
 use core::arch::asm;
 
 pub fn rd_tp() -> u64 {

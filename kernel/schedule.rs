@@ -7,7 +7,7 @@ use alloc::boxed::Box;
 use core::ptr::null_mut;
 
 pub static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
-static mut CONTEXT: Context = Context::zero();
+pub static mut CONTEXT: Context = Context::zero();
 
 pub struct Queue {
     front: *mut Proc,
@@ -77,6 +77,7 @@ fn runnable_proc() -> Box<Proc> {
 
 extern "C" {
     fn kswitch_proc(proc: *mut (), oldp: &mut Context, newp: &mut Context) -> *mut ();
+    pub fn kswitch(oldp: &mut Context, newp: &mut Context);
 }
 
 pub fn scheduler() -> ! {

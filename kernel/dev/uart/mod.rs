@@ -21,6 +21,12 @@ impl<T: Uart> UartWrapper<T> {
     pub const fn new(base: *mut T) -> Self {
         Self { base }
     }
+
+    pub fn write_bytes(&mut self, b: &[u8]) {
+        for c in b {
+            self.tx(*c);
+        }
+    }
 }
 
 use core::ops::{Deref, DerefMut};

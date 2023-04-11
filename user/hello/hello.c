@@ -15,7 +15,7 @@ void delay_cycles() {
 
 int main() {
     while (1) {
-        getpid();
+        printf("mypid: %d\n", getpid());
         delay_cycles();
     }
 }
