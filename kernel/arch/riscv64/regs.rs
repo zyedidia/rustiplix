@@ -52,8 +52,10 @@ pub fn rd_gp() -> u64 {
     value
 }
 
+use super::trap::Trapframe;
+use core::ptr::null_mut;
+
 #[repr(C)]
-#[derive(Default)]
 pub struct Context {
     pub ra: usize,
     pub sp: usize,
@@ -73,10 +75,13 @@ pub struct Context {
     pub s11: usize,
 
     pub satp: usize,
+    pub proc: *mut Trapframe,
 }
 
+use super::vm::Pagetable;
+
 impl Context {
-    pub const fn new() -> Self {
+    pub const fn zero() -> Self {
         return Self {
             ra: 0,
             sp: 0,
@@ -93,6 +98,32 @@ impl Context {
             s10: 0,
             s11: 0,
             satp: 0,
+            proc: null_mut(),
+        };
+    }
+
+    pub fn set_pt(&mut self, pt: &Pagetable) {
+        self.satp = pt.satp();
+    }
+
+    pub fn new(sp: usize, ra: usize) -> Self {
+        return Self {
+            ra,
+            sp,
+            s0: 0,
+            s1: 0,
+            s2: 0,
+            s3: 0,
+            s4: 0,
+            s5: 0,
+            s6: 0,
+            s7: 0,
+            s8: 0,
+            s9: 0,
+            s10: 0,
+            s11: 0,
+            satp: 0,
+            proc: null_mut(),
         };
     }
 }

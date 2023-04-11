@@ -1,4 +1,5 @@
 # User-mode trap handler.
+.section ".text.uservec"
 .align 4
 .globl uservec
 uservec:
@@ -47,6 +48,7 @@ uservec:
 	j usertrap
 
 # function: userret(Proc* p)
+.section ".text.userret"
 .globl userret
 userret:
 	ld ra, 32(a0)

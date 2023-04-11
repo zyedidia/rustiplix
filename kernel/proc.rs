@@ -1,5 +1,5 @@
 use crate::arch::regs::Context;
-use crate::arch::trap::Trapframe;
+use crate::arch::trap::{usertrapret, Trapframe};
 use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
 use crate::kalloc::{zalloc, zallocpage};
@@ -74,7 +74,7 @@ impl Proc {
         trapframe.regs.sp = Self::STACK_VA + sys::PAGESIZE - 16;
         trapframe.epc = entry as usize;
 
-        let proc = unsafe {
+        let mut proc = unsafe {
             let mut data = match Box::<Proc>::try_new_uninit() {
                 Err(_) => {
                     return None;
@@ -91,11 +91,16 @@ impl Proc {
                 parent: 0,
                 next: null_mut(),
                 prev: null_mut(),
-                context: Context::default(),
+                context: Context::new(
+                    Self::kstackp(proc) as usize,
+                    Self::forkret as *const () as usize,
+                ),
             });
             addr_of_mut!((*proc).canary).write(Self::CANARY);
             data.assume_init()
         };
+
+        proc.data.context.set_pt(&proc.data.pt);
 
         Some(proc)
     }
@@ -109,6 +114,10 @@ impl Proc {
 
     pub fn check_stack(&mut self) {
         assert!(self.canary == Self::CANARY);
+    }
+
+    pub unsafe extern "C" fn forkret(proc: *mut Proc) {
+        usertrapret(Box::<Proc>::from_raw(proc));
     }
 }
 

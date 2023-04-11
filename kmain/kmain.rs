@@ -1,10 +1,10 @@
 use kernel::arch::timer;
 use kernel::arch::trap::irq;
-use kernel::arch::trap::usertrapret;
 use kernel::cpu::cpu;
 use kernel::kalloc::init_alloc;
 use kernel::println;
 use kernel::proc::Proc;
+use kernel::schedule::{scheduler, RUN_QUEUE};
 
 struct Foo {
     i: i64,
@@ -45,11 +45,13 @@ pub extern "C" fn kmain() {
 
     let proc = Proc::new_boxed(hello).unwrap();
 
+    RUN_QUEUE.lock().push_front(proc);
+
     unsafe { irq::on() };
 
     timer::intr(timer::TIME_SLICE_US);
 
     kernel::builtin::mark();
 
-    unsafe { usertrapret(proc) };
+    scheduler();
 }

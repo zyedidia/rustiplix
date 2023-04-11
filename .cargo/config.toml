@@ -5,6 +5,7 @@ target-dir = ".target"
 
 [profile.dev]
 opt-level = 1
+debug = true
 panic = "abort"
 
 [profile.release]

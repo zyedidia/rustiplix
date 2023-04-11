@@ -6,8 +6,8 @@ use crate::sync::spinlock::SpinLock;
 use alloc::boxed::Box;
 use core::ptr::null_mut;
 
-static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
-static mut CONTEXT: Context = Context::new();
+pub static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
+static mut CONTEXT: Context = Context::zero();
 
 pub struct Queue {
     front: *mut Proc,
@@ -76,7 +76,7 @@ fn runnable_proc() -> Box<Proc> {
 }
 
 extern "C" {
-    fn kswitch(oldp: &mut Context, newp: &mut Context);
+    fn kswitch_proc(proc: *mut (), oldp: &mut Context, newp: &mut Context) -> *mut ();
 }
 
 pub fn scheduler() -> ! {
@@ -86,7 +86,12 @@ pub fn scheduler() -> ! {
         unsafe {
             irq::off();
             // TODO: should have one context per core
-            kswitch(&mut CONTEXT, &mut p.data.context);
+            let rp = Box::<Proc>::into_raw(p);
+            p = Box::<Proc>::from_raw(kswitch_proc(
+                rp as *mut (),
+                &mut CONTEXT,
+                &mut (*rp).data.context,
+            ) as *mut Proc);
         }
 
         if p.data.state == ProcState::Runnable {
