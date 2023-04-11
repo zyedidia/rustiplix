@@ -7,9 +7,9 @@ use alloc::boxed::Box;
 use core::ptr::null_mut;
 
 static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
+static mut CONTEXT: Context = Context::new();
 
 pub struct Queue {
-    context: Context,
     front: *mut Proc,
     back: *mut Proc,
 }
@@ -21,7 +21,6 @@ impl Queue {
         Self {
             front: null_mut(),
             back: null_mut(),
-            context: Context::new(),
         }
     }
 
@@ -86,11 +85,8 @@ pub fn scheduler() -> ! {
 
         unsafe {
             irq::off();
-            // TODO: Should release the lock before calling kswitch
-            // so that the lock is not held for the entirety of the
-            // time slice.
-            let ctx = &mut RUN_QUEUE.lock().context;
-            kswitch(ctx, &mut p.data.context);
+            // TODO: should have one context per core
+            kswitch(&mut CONTEXT, &mut p.data.context);
         }
 
         if p.data.state == ProcState::Runnable {
