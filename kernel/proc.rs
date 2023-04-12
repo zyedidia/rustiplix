@@ -4,7 +4,7 @@ use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
 use crate::kalloc::{zalloc, zallocpage};
 use crate::sys;
-use crate::vm::{perm, PageMap};
+use crate::vm::{perm, PageMap, PtIter};
 
 use alloc::boxed::Box;
 use core::ptr::{addr_of_mut, null_mut};
@@ -105,6 +105,10 @@ impl Proc {
         };
 
         proc.data.context.set_pt(&proc.data.pt);
+
+        for (pte, va) in PtIter::new(&mut proc.data.pt) {
+            println!("{:#x} -> {:#x}", va, pte.pa());
+        }
 
         Some(proc)
     }

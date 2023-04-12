@@ -50,7 +50,8 @@ pub const fn pa2hka(pa: usize) -> usize {
     pa + sys::HIGHMEM_BASE
 }
 
-use crate::arch::vm::{Pagetable, PtLevel};
+use crate::arch::vm::{Pagetable, PtLevel, Pte};
+use crate::proc::Proc;
 use alloc::boxed::Box;
 use core::ptr::drop_in_place;
 
@@ -70,5 +71,61 @@ impl PageMap for Pagetable {
             return None;
         }
         Some(())
+    }
+}
+
+pub struct PtIter<'a> {
+    idx: usize,
+    va: usize,
+    pte: *mut Pte,
+    pt: &'a mut Pagetable,
+}
+
+impl PtIter<'_> {
+    pub fn new<'a>(pt: &'a mut Pagetable) -> PtIter<'a> {
+        PtIter::<'a> {
+            idx: 0,
+            va: 0,
+            pte: core::ptr::null_mut(),
+            pt,
+        }
+    }
+
+    fn advance(&mut self) -> bool {
+        if self.va >= Proc::MAX_VA {
+            return false;
+        }
+
+        if let Some((pte, lvl)) = self.pt.walk::<false>(self.va, PtLevel::Normal) {
+            if lvl != PtLevel::Normal || !pte.is_valid() {
+                self.pte = core::ptr::null_mut();
+            } else {
+                self.pte = pte as *mut Pte;
+            }
+            self.va += lvl.size();
+        } else {
+            self.pte = core::ptr::null_mut();
+            self.va += PtLevel::Normal.size();
+        }
+
+        true
+    }
+}
+
+impl<'a> Iterator for PtIter<'a> {
+    type Item = (&'a mut Pte, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut va = self.va;
+        if !self.advance() {
+            return None;
+        }
+        while self.pte == core::ptr::null_mut() {
+            va = self.va;
+            if !self.advance() {
+                return None;
+            }
+        }
+        unsafe { Some((&mut *self.pte, va)) }
     }
 }

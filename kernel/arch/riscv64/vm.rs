@@ -59,6 +59,10 @@ impl Pte {
         self.set_dirty(1);
     }
 
+    pub fn is_valid(&self) -> bool {
+        self.valid() != 0
+    }
+
     pub fn pa(&self) -> usize {
         ((self.ppn0() << 12) | (self.ppn1() << 21) | (self.ppn2() << 30)) as usize
     }
@@ -109,7 +113,7 @@ fn vpn(level: usize, va: usize) -> usize {
 #[repr(align(4096))]
 #[repr(C)]
 pub struct Pagetable {
-    ptes: [Pte; 512],
+    pub ptes: [Pte; 512],
 }
 
 use crate::kalloc::Zero;
