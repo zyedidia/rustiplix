@@ -1,9 +1,10 @@
-use crate::proc::Proc;
+use crate::proc::{Proc, ProcState};
 use core::slice;
 
 mod num {
     pub const SYS_WRITE: usize = 0;
     pub const SYS_GETPID: usize = 1;
+    pub const SYS_EXIT: usize = 2;
     pub const SYS_SBRK: usize = 5;
 }
 
@@ -29,6 +30,9 @@ pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
         }
         num::SYS_SBRK => {
             ret = sys_sbrk(p);
+        }
+        num::SYS_EXIT => {
+            sys_exit(p);
         }
         _ => {
             println!("unknown syscall {}", sysno);
@@ -71,4 +75,11 @@ fn sys_write(_p: &mut Proc, fd: i32, addr: usize, sz: usize) -> isize {
 
 fn sys_sbrk(_p: &mut Proc) -> isize {
     -1
+}
+
+fn sys_exit(p: &mut Proc) -> ! {
+    println!("{}: exited", p.data.pid);
+    p.data.state = ProcState::Exited;
+    p.yield_();
+    panic!("exited process resumed");
 }

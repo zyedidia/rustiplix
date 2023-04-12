@@ -37,6 +37,7 @@ impl Queue {
             self.front = n;
         }
     }
+
     pub unsafe fn remove(&mut self, n: *mut Proc) {
         if (*n).data.next != null_mut() {
             (*(*n).data.next).data.prev = (*n).data.prev;
@@ -49,6 +50,7 @@ impl Queue {
             self.front = (*n).data.next;
         }
     }
+
     pub fn pop_back(&mut self) -> Option<Box<Proc>> {
         let b = self.back;
         if b == null_mut() {
@@ -58,6 +60,25 @@ impl Queue {
             self.remove(b);
             Some(Box::<Proc>::from_raw(b))
         }
+    }
+
+    pub fn wake_all(&mut self) {
+        let mut p = self.front;
+        while p != null_mut() {
+            if p == null_mut() {
+                break;
+            }
+            unsafe {
+                self.wake(p);
+                p = (*p).data.next;
+            }
+        }
+    }
+
+    pub unsafe fn wake(&mut self, p: *mut Proc) {
+        assert!((*p).data.state == ProcState::Blocked);
+        self.remove(p);
+        RUN_QUEUE.lock().push_front(Box::<Proc>::from_raw(p));
     }
 }
 
