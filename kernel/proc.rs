@@ -3,7 +3,7 @@ use crate::arch::trap::{usertrapret, Trapframe};
 use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
 use crate::kalloc::{kallocpage, kfree, zalloc, zallocpage};
-use crate::schedule::Queue;
+use crate::schedule::{Queue, QueueType};
 use crate::sys;
 use crate::vm::{perm, PageMap, PtIter};
 
@@ -25,9 +25,9 @@ pub enum ProcState {
 pub struct ProcData {
     pub pid: u32,
     pub pt: Box<Pagetable>,
-    nchild: usize,
-    parent: u32,
-    pub wq: *mut (),
+    pub nchild: usize,
+    pub parent: *mut Proc,
+    pub wq: Option<QueueType>,
 
     pub context: Context,
 
@@ -76,10 +76,10 @@ impl Proc {
                 pt,
                 nchild: 0,
                 state: ProcState::Runnable,
-                parent: 0,
+                parent: null_mut(),
                 next: null_mut(),
                 prev: null_mut(),
-                wq: null_mut(),
+                wq: None,
                 context: Context::new(
                     Self::kstackp(proc) as usize,
                     Self::forkret as *const () as usize,
@@ -108,6 +108,7 @@ impl Proc {
             p.data.pt.mappg(map.va(), pg, map.perm())?;
         }
 
+        p.data.parent = parent as *mut Proc;
         p.trapframe = parent.trapframe;
 
         Some(p)
@@ -154,14 +155,22 @@ impl Proc {
     }
 
     pub fn block(&mut self, queue: &mut Queue) {
-        self.data.state = ProcState::Blocked;
-        self.data.wq = queue as *mut Queue as *mut ();
+        self.wait(queue, ProcState::Blocked);
+    }
+
+    pub fn exit(&mut self, queue: &mut Queue) {
+        self.wait(queue, ProcState::Exited);
+    }
+
+    fn wait(&mut self, queue: &mut Queue, state: ProcState) {
+        self.data.state = state;
+        self.data.wq = Some(queue.id);
         unsafe { queue.push_front_raw(self as *mut Proc) };
         self.yield_();
     }
 
     pub fn unblock(&mut self) {
-        self.data.wq = null_mut();
+        self.data.wq = None;
     }
 
     pub unsafe extern "C" fn forkret(proc: *mut Proc) {

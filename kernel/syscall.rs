@@ -1,5 +1,5 @@
 use crate::proc::{Proc, ProcState};
-use crate::schedule::{RUN_QUEUE, TICKS_QUEUE};
+use crate::schedule::{QueueIter, EXIT_QUEUE, RUN_QUEUE, TICKS_QUEUE, WAIT_QUEUE};
 use core::slice;
 
 mod num {
@@ -16,6 +16,7 @@ mod err {
     pub const NOSYS: isize = -38;
     pub const FAULT: isize = -14;
     pub const NOMEM: isize = -12;
+    pub const CHILD: isize = -10;
 }
 
 pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
@@ -92,6 +93,7 @@ fn sys_fork(p: &mut Proc) -> isize {
         Some(p) => p,
     };
     child.trapframe.regs.set_ret(0);
+    p.data.nchild += 1;
 
     let pid = child.data.pid;
     RUN_QUEUE.lock().push_front(child);
@@ -105,6 +107,23 @@ fn sys_sbrk(_p: &mut Proc) -> isize {
 fn sys_exit(p: &mut Proc) -> ! {
     println!("{}: exited", p.data.pid);
     p.data.state = ProcState::Exited;
+
+    // TODO: reparent all children
+
+    // TODO: wake up any parents
+
+    // p.exit(&mut EXIT_QUEUE.lock());
+
+    // if !p.data.parent.is_null() {
+    //     unsafe {
+    //         if (*p.data.parent).data.state == ProcState::Blocked
+    //             && (*p.data.parent).data.wq == Some(QueueType::Wait)
+    //         {
+    //             WAIT_QUEUE.lock().wake(p.data.parent);
+    //         }
+    //     }
+    // }
+
     p.yield_();
     panic!("exited process resumed");
 }
@@ -120,4 +139,27 @@ fn sys_usleep(p: &mut Proc, us: u64) {
         unsafe { p.block(&mut TICKS_QUEUE) };
     }
     p.unblock();
+}
+
+fn sys_wait(p: &mut Proc) -> isize {
+    if p.data.nchild == 0 {
+        return err::CHILD;
+    }
+
+    loop {
+        let mut exited = EXIT_QUEUE.lock();
+        for zombie in QueueIter::new(&mut exited) {
+            unsafe {
+                if (*zombie).data.parent == p as *mut Proc {
+                    let pid = (*zombie).data.pid;
+                    exited.remove(zombie);
+                    core::ptr::drop_in_place(zombie);
+                    p.data.nchild -= 1;
+                    return pid as isize;
+                }
+            }
+        }
+        let mut wq = WAIT_QUEUE.lock();
+        p.block(&mut wq);
+    }
 }

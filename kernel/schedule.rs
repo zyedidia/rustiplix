@@ -6,24 +6,58 @@ use crate::sync::spinlock::SpinLock;
 use alloc::boxed::Box;
 use core::ptr::null_mut;
 
-pub static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
-pub static mut TICKS_QUEUE: Queue = Queue::new();
+pub static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new(QueueType::Run));
+pub static EXIT_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new(QueueType::Exit));
+pub static WAIT_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new(QueueType::Wait));
+pub static mut TICKS_QUEUE: Queue = Queue::new(QueueType::Ticks);
 pub static mut CONTEXT: Context = Context::zero();
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub enum QueueType {
+    Run,
+    Exit,
+    Wait,
+    Ticks,
+}
+
+pub struct QueueIter {
+    cur: *mut Proc,
+}
+
+impl QueueIter {
+    pub fn new(q: &Queue) -> QueueIter {
+        Self { cur: q.front }
+    }
+}
+
+impl Iterator for QueueIter {
+    type Item = *mut Proc;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cur == null_mut() {
+            return None;
+        }
+        let ret = self.cur;
+        unsafe { self.cur = (*self.cur).data.next };
+        Some(ret)
+    }
+}
 
 pub struct Queue {
     front: *mut Proc,
     back: *mut Proc,
     size: usize,
+    pub id: QueueType,
 }
 
 unsafe impl Send for Queue {}
 
 impl Queue {
-    pub const fn new() -> Self {
+    pub const fn new(id: QueueType) -> Self {
         Self {
             front: null_mut(),
             back: null_mut(),
             size: 0,
+            id,
         }
     }
 
@@ -117,7 +151,7 @@ pub fn scheduler() -> ! {
 
             if (*p).data.state == ProcState::Runnable {
                 RUN_QUEUE.lock().push_front(Box::<Proc>::from_raw(p));
-            } else if (*p).data.wq == null_mut() {
+            } else if (*p).data.wq.is_none() {
                 // Not runnable and not on any queue means we can free this process.
                 core::ptr::drop_in_place(p);
             }
