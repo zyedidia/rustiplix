@@ -122,9 +122,9 @@ fn sys_exit(p: &mut Proc) -> ! {
                 WAIT_QUEUE.lock().wake(p.data.parent);
             }
         }
-        p.exit(&mut EXIT_QUEUE.lock());
     }
 
+    p.exit(&mut EXIT_QUEUE.lock());
     p.yield_();
     panic!("exited process resumed");
 }
