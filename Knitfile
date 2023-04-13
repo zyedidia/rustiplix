@@ -8,7 +8,7 @@ conf = {
 
 local prefix := riscv64-unknown-elf
 local target := riscv64imac-unknown-none-elf
-local objdir = ".obj/"
+local objdir = ".obj"
 
 tools = {
     cc := $prefix-gcc
@@ -55,12 +55,12 @@ local asm = {
     bootloader = knit.extrepl(knit.rglob("bootloader", "*.s"), ".s", ".asm.o"),
 }
 
-lib.bootloader.uart = knit.prefix(lib.bootloader.uart, objdir)
-lib.bootloader.payload = knit.prefix(lib.bootloader.payload, objdir)
-lib.kmain = knit.prefix(lib.kmain, objdir)
-asm.kernel = knit.prefix(asm.kernel, objdir)
-asm.kmain = knit.prefix(asm.kmain, objdir)
-asm.bootloader = knit.prefix(asm.bootloader, objdir)
+lib.bootloader.uart = knit.prefix(lib.bootloader.uart, objdir .. "/")
+lib.bootloader.payload = knit.prefix(lib.bootloader.payload, objdir .. "/")
+lib.kmain = knit.prefix(lib.kmain, objdir .. "/")
+asm.kernel = knit.prefix(asm.kernel, objdir .. "/")
+asm.kmain = knit.prefix(asm.kmain, objdir .. "/")
+asm.bootloader = knit.prefix(asm.bootloader, objdir .. "/")
 
 local link = {
     kernel = f"link/$(conf.board)/kernel.ld",
@@ -94,9 +94,9 @@ return b{
     $ bootloader.elf: $(asm.kernel) $(asm.bootloader) $(lib.bootloader.uart) $(link.bootloader)[I]
         $(tools.cc) -T$(link.bootloader) -Wl,--gc-sections $input -o $output -nostdlib -nostdinc
 
-    $ .obj/%.asm.o: %.s
+    $ $objdir/%.asm.o: %.s
         $(tools.cc) $(flags.as) $input -c -o $output
-    $ .obj/bootloader/payload.asm.o: bootloader/payload.s kernel.payload[I]
+    $ $objdir/bootloader/payload.asm.o: bootloader/payload.s kernel.payload[I]
         $(tools.cc) $(flags.as) $input -c -o $output -DPAYLOAD=kernel.payload
     $ %.list: %.elf
         $(tools.objdump) $(flags.objdump) $input > $output
