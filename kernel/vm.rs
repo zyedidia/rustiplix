@@ -99,6 +99,10 @@ impl VaMapping<'_> {
     pub fn pg(&self) -> &[u8] {
         unsafe { core::slice::from_raw_parts(pa2ka(self.pte.pa()) as *const u8, sys::PAGESIZE) }
     }
+
+    pub fn pg_raw(&mut self) -> *mut u8 {
+        pa2ka(self.pte.pa()) as *mut u8
+    }
 }
 
 pub struct PtIter<'a> {

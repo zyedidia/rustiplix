@@ -2,7 +2,7 @@ use crate::arch::regs::Context;
 use crate::arch::trap::{usertrapret, Trapframe};
 use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
-use crate::kalloc::{kallocpage, zalloc, zallocpage};
+use crate::kalloc::{kallocpage, kfree, zalloc, zallocpage};
 use crate::sys;
 use crate::vm::{perm, PageMap, PtIter};
 
@@ -157,6 +157,8 @@ impl Proc {
 
 impl Drop for Proc {
     fn drop(&mut self) {
-        // TODO: drop all pages "owned" by the pagetable.
+        for mut map in PtIter::new(&mut self.data.pt) {
+            unsafe { kfree(map.pg_raw()) };
+        }
     }
 }
