@@ -7,11 +7,13 @@ use alloc::boxed::Box;
 use core::ptr::null_mut;
 
 pub static RUN_QUEUE: SpinLock<Queue> = SpinLock::new(Queue::new());
+pub static mut TICKS_QUEUE: Queue = Queue::new();
 pub static mut CONTEXT: Context = Context::zero();
 
 pub struct Queue {
     front: *mut Proc,
     back: *mut Proc,
+    size: usize,
 }
 
 unsafe impl Send for Queue {}
@@ -21,24 +23,28 @@ impl Queue {
         Self {
             front: null_mut(),
             back: null_mut(),
+            size: 0,
         }
     }
 
     pub fn push_front(&mut self, n: Box<Proc>) {
-        unsafe {
-            let n = Box::<Proc>::into_raw(n);
-            (*n).data.next = self.front;
-            (*n).data.prev = null_mut();
-            if self.front != null_mut() {
-                (*self.front).data.prev = n;
-            } else {
-                self.back = n;
-            }
-            self.front = n;
+        unsafe { self.push_front_raw(Box::<Proc>::into_raw(n)) };
+    }
+
+    pub unsafe fn push_front_raw(&mut self, n: *mut Proc) {
+        (*n).data.next = self.front;
+        (*n).data.prev = null_mut();
+        if self.front != null_mut() {
+            (*self.front).data.prev = n;
+        } else {
+            self.back = n;
         }
+        self.front = n;
+        self.size += 1;
     }
 
     pub unsafe fn remove(&mut self, n: *mut Proc) {
+        assert!(self.size > 0);
         if (*n).data.next != null_mut() {
             (*(*n).data.next).data.prev = (*n).data.prev;
         } else {
@@ -49,6 +55,7 @@ impl Queue {
         } else {
             self.front = (*n).data.next;
         }
+        self.size -= 1;
     }
 
     pub fn pop_back(&mut self) -> Option<Box<Proc>> {
@@ -63,14 +70,10 @@ impl Queue {
     }
 
     pub fn wake_all(&mut self) {
-        let mut p = self.front;
-        while p != null_mut() {
-            if p == null_mut() {
-                break;
-            }
+        while self.front != null_mut() {
             unsafe {
-                self.wake(p);
-                p = (*p).data.next;
+                // Removes front from the queue.
+                self.wake(self.front);
             }
         }
     }
@@ -78,11 +81,13 @@ impl Queue {
     pub unsafe fn wake(&mut self, p: *mut Proc) {
         assert!((*p).data.state == ProcState::Blocked);
         self.remove(p);
-        RUN_QUEUE.lock().push_front(Box::<Proc>::from_raw(p));
+        (*p).data.state = ProcState::Runnable;
+        RUN_QUEUE.lock().push_front_raw(p);
     }
 }
 
 fn runnable_proc() -> Box<Proc> {
+    unsafe { irq::on() };
     loop {
         match RUN_QUEUE.lock().pop_back() {
             None => {
@@ -103,21 +108,19 @@ extern "C" {
 
 pub fn scheduler() -> ! {
     loop {
-        let mut p = runnable_proc();
+        let mut p = Box::<Proc>::into_raw(runnable_proc());
 
         unsafe {
             irq::off();
             // TODO: should have one context per core
-            let rp = Box::<Proc>::into_raw(p);
-            p = Box::<Proc>::from_raw(kswitch_proc(
-                rp as *mut (),
-                &mut CONTEXT,
-                &mut (*rp).data.context,
-            ) as *mut Proc);
-        }
+            p = kswitch_proc(p as *mut (), &mut CONTEXT, &mut (*p).data.context) as *mut Proc;
 
-        if p.data.state == ProcState::Runnable {
-            RUN_QUEUE.lock().push_front(p);
+            if (*p).data.state == ProcState::Runnable {
+                RUN_QUEUE.lock().push_front(Box::<Proc>::from_raw(p));
+            } else if (*p).data.wq == null_mut() {
+                // Not runnable and not on any queue means we can free this process.
+                core::ptr::drop_in_place(p);
+            }
         }
     }
 }

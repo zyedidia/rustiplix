@@ -3,6 +3,7 @@ use crate::arch::trap::{usertrapret, Trapframe};
 use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
 use crate::kalloc::{kallocpage, kfree, zalloc, zallocpage};
+use crate::schedule::Queue;
 use crate::sys;
 use crate::vm::{perm, PageMap, PtIter};
 
@@ -26,6 +27,7 @@ pub struct ProcData {
     pub pt: Box<Pagetable>,
     nchild: usize,
     parent: u32,
+    pub wq: *mut (),
 
     pub context: Context,
 
@@ -77,6 +79,7 @@ impl Proc {
                 parent: 0,
                 next: null_mut(),
                 prev: null_mut(),
+                wq: null_mut(),
                 context: Context::new(
                     Self::kstackp(proc) as usize,
                     Self::forkret as *const () as usize,
@@ -150,6 +153,17 @@ impl Proc {
         unsafe { kswitch(&mut self.data.context, &mut CONTEXT) }
     }
 
+    pub fn block(&mut self, queue: &mut Queue) {
+        self.data.state = ProcState::Blocked;
+        self.data.wq = queue as *mut Queue as *mut ();
+        unsafe { queue.push_front_raw(self as *mut Proc) };
+        self.yield_();
+    }
+
+    pub fn unblock(&mut self) {
+        self.data.wq = null_mut();
+    }
+
     pub unsafe extern "C" fn forkret(proc: *mut Proc) {
         usertrapret(proc);
     }
@@ -157,6 +171,7 @@ impl Proc {
 
 impl Drop for Proc {
     fn drop(&mut self) {
+        println!("{}: dropped", self.data.pid);
         for mut map in PtIter::new(&mut self.data.pt) {
             unsafe { kfree(map.pg_raw()) };
         }

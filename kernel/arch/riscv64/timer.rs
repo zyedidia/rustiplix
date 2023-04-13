@@ -13,7 +13,7 @@ pub fn time() -> u64 {
     board::CLINT.rd_mtime()
 }
 
-pub const TIME_SLICE_US: u64 = 10_000;
+pub const TIME_SLICE_US: u64 = 100_000;
 
 pub fn intr(us: u64) {
     let next = time() + freq() / 1_000_000 * us;

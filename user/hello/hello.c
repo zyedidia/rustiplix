@@ -8,15 +8,17 @@
 #include "syslib.h"
 
 void delay_cycles() {
-    for (int i = 0; i < 1000000000 / 2; i++) {
-        asm volatile ("nop");
-    }
+    usleep(500 * 1000);
+    /* for (int i = 0; i < 1000000000 / 2; i++) { */
+    /*     asm volatile ("nop"); */
+    /* } */
 }
 
 int main() {
     fork();
+    int pid = getpid();
     for (int i = 0; i < 5; i++) {
-        printf("%d: mypid: %d\n", i, getpid());
+        printf("%d: loop %d\n", pid, i);
         delay_cycles();
     }
 }

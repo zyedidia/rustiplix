@@ -17,3 +17,11 @@ pub fn delay_cycles(cyc: u64) {
 pub fn delay_us(us: u64) {
     delay(us * timer::freq() / 1_000_000, timer::time);
 }
+
+pub fn time() -> u64 {
+    timer::time()
+}
+
+pub fn us_since(prev: u64) -> u64 {
+    (timer::time() - prev) * 1_000_000 / timer::freq()
+}

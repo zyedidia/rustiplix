@@ -3,11 +3,7 @@ pub mod irq {
     use crate::bit::Bit;
 
     pub fn init() {
-        extern "C" {
-            fn kernelvec();
-        }
-
-        csr!(stvec = kernelvec);
+        csr!(stvec = super::kernelvec);
     }
 
     pub unsafe fn on() {
@@ -24,8 +20,8 @@ pub mod irq {
 }
 
 use crate::arch::riscv64::csr::cause;
-use crate::arch::riscv64::timer;
 use crate::cpu::cpu;
+use crate::trap;
 use alloc::boxed::Box;
 
 #[no_mangle]
@@ -33,10 +29,10 @@ pub extern "C" fn kerneltrap() {
     let sepc = csr!(sepc);
     let scause = csr!(scause);
 
-    println!("[kernel trap] sepc: {:#x}, cause: {:#x}", sepc, scause,);
+    // println!("[kernel trap] sepc: {:#x}, cause: {:#x}", sepc, scause,);
 
     if scause == cause::STI {
-        timer::intr(timer::TIME_SLICE_US);
+        trap::irq_handler_kern(trap::Irq::Timer);
     } else {
         panic!(
             "[unhandled kernel trap] core: {}, epc: {:#x}, cause: {:#x}, stval: {:#x}",
@@ -66,10 +62,13 @@ use crate::syscall::syscall;
 extern "C" {
     fn userret(p: *mut Trapframe) -> !;
     fn uservec();
+    fn kernelvec();
 }
 
 #[no_mangle]
 pub extern "C" fn usertrap(p: *mut Proc) {
+    csr!(stvec = kernelvec);
+
     let mut p = unsafe { Box::<Proc>::from_raw(p) };
 
     // println!(
@@ -87,8 +86,7 @@ pub extern "C" fn usertrap(p: *mut Proc) {
             p.trapframe.regs.a0 = syscall(&mut p, sysno) as usize;
         }
         cause::STI => {
-            timer::intr(timer::TIME_SLICE_US);
-            p.yield_();
+            trap::irq_handler_user(&mut p, trap::Irq::Timer);
         }
         _ => {
             panic!(

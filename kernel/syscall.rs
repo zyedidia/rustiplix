@@ -1,5 +1,5 @@
 use crate::proc::{Proc, ProcState};
-use crate::schedule::RUN_QUEUE;
+use crate::schedule::{RUN_QUEUE, TICKS_QUEUE};
 use core::slice;
 
 mod num {
@@ -8,6 +8,7 @@ mod num {
     pub const SYS_EXIT: usize = 2;
     pub const SYS_FORK: usize = 3;
     pub const SYS_SBRK: usize = 5;
+    pub const SYS_USLEEP: usize = 6;
 }
 
 mod err {
@@ -39,6 +40,10 @@ pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
         }
         num::SYS_FORK => {
             ret = sys_fork(p);
+        }
+        num::SYS_USLEEP => {
+            sys_usleep(p, p.trapframe.regs.arg0() as u64);
+            ret = 0;
         }
         _ => {
             println!("unknown syscall {}", sysno);
@@ -102,4 +107,17 @@ fn sys_exit(p: &mut Proc) -> ! {
     p.data.state = ProcState::Exited;
     p.yield_();
     panic!("exited process resumed");
+}
+
+fn sys_usleep(p: &mut Proc, us: u64) {
+    use crate::timer;
+    let start = timer::time();
+
+    loop {
+        if timer::us_since(start) >= us {
+            break;
+        }
+        unsafe { p.block(&mut TICKS_QUEUE) };
+    }
+    p.unblock();
 }
