@@ -1,5 +1,5 @@
 #[repr(C)]
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Regs {
     pub ra: usize,
     pub sp: usize,
@@ -43,6 +43,9 @@ impl Regs {
     }
     pub fn arg2(&self) -> usize {
         self.a2
+    }
+    pub fn set_ret(&mut self, val: usize) {
+        self.a0 = val;
     }
 }
 

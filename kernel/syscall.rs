@@ -1,17 +1,20 @@
 use crate::proc::{Proc, ProcState};
+use crate::schedule::RUN_QUEUE;
 use core::slice;
 
 mod num {
     pub const SYS_WRITE: usize = 0;
     pub const SYS_GETPID: usize = 1;
     pub const SYS_EXIT: usize = 2;
+    pub const SYS_FORK: usize = 3;
     pub const SYS_SBRK: usize = 5;
 }
 
 mod err {
     pub const BADF: isize = -9;
-    pub const NO_SYS: isize = -38;
+    pub const NOSYS: isize = -38;
     pub const FAULT: isize = -14;
+    pub const NOMEM: isize = -12;
 }
 
 pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
@@ -34,9 +37,12 @@ pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
         num::SYS_EXIT => {
             sys_exit(p);
         }
+        num::SYS_FORK => {
+            ret = sys_fork(p);
+        }
         _ => {
             println!("unknown syscall {}", sysno);
-            return err::NO_SYS;
+            return err::NOSYS;
         }
     }
     ret
@@ -71,6 +77,20 @@ fn sys_write(_p: &mut Proc, fd: i32, addr: usize, sz: usize) -> isize {
     }
 
     sz as isize
+}
+
+fn sys_fork(p: &mut Proc) -> isize {
+    let mut child = match Proc::new_from_parent(p) {
+        None => {
+            return err::NOMEM;
+        }
+        Some(p) => p,
+    };
+    child.trapframe.regs.set_ret(0);
+
+    let pid = child.data.pid;
+    RUN_QUEUE.lock().push_front(child);
+    return pid as isize;
 }
 
 fn sys_sbrk(_p: &mut Proc) -> isize {

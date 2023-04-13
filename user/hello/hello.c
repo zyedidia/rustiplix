@@ -14,6 +14,7 @@ void delay_cycles() {
 }
 
 int main() {
+    fork();
     for (int i = 0; i < 5; i++) {
         printf("%d: mypid: %d\n", i, getpid());
         delay_cycles();

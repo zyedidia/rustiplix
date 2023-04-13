@@ -2,7 +2,7 @@ use crate::arch::regs::Context;
 use crate::arch::trap::{usertrapret, Trapframe};
 use crate::arch::vm::{kernel_procmap, Pagetable};
 use crate::elf;
-use crate::kalloc::{zalloc, zallocpage};
+use crate::kalloc::{kallocpage, zalloc, zallocpage};
 use crate::sys;
 use crate::vm::{perm, PageMap, PtIter};
 
@@ -52,31 +52,14 @@ impl Proc {
     pub const MAX_VA: usize = Self::STACK_VA + Self::STACK_SIZE;
     pub const CANARY: u64 = 0xfeedface_deadbeef;
 
-    pub fn new_boxed(bin: &[u8]) -> Option<Box<Proc>> {
+    fn new_empty() -> Option<Box<Proc>> {
         let mut pt = match zalloc::<Pagetable>() {
             Err(_) => {
                 return None;
             }
             Ok(pt) => pt,
         };
-
-        // Map code by loading the elf data.
-        let (entry, _) = elf::load64(&mut pt, bin)?;
-
-        // Map kernel.
         kernel_procmap(&mut pt);
-
-        // Allocate/map stack.
-        let ustack = match zallocpage() {
-            Err(_) => {
-                return None;
-            }
-            Ok(ustack) => ustack,
-        };
-        pt.mappg(Self::STACK_VA, ustack, perm::URW)?;
-        let mut trapframe = Trapframe::default();
-        trapframe.regs.sp = Self::STACK_VA + sys::PAGESIZE - 16;
-        trapframe.epc = entry as usize;
 
         let mut proc = unsafe {
             let mut data = match Box::<Proc>::try_new_uninit() {
@@ -86,7 +69,6 @@ impl Proc {
                 Ok(data) => data,
             };
             let proc = data.as_mut_ptr();
-            addr_of_mut!((*proc).trapframe).write(trapframe);
             addr_of_mut!((*proc).data).write(ProcData {
                 pid: NEXTPID.fetch_add(1, Ordering::Relaxed),
                 pt,
@@ -106,11 +88,47 @@ impl Proc {
 
         proc.data.context.set_pt(&proc.data.pt);
 
-        for (pte, va) in PtIter::new(&mut proc.data.pt) {
-            println!("{:#x} -> {:#x}", va, pte.pa());
+        Some(proc)
+    }
+
+    pub fn new_from_parent(parent: &mut Proc) -> Option<Box<Proc>> {
+        let mut p = Self::new_empty()?;
+
+        for map in PtIter::new(&mut parent.data.pt) {
+            let mut pg = match kallocpage() {
+                Err(_) => {
+                    return None;
+                }
+                Ok(pg) => pg,
+            };
+            pg.copy_from_slice(map.pg());
+            p.data.pt.mappg(map.va(), pg, map.perm())?;
         }
 
-        Some(proc)
+        p.trapframe = parent.trapframe;
+
+        Some(p)
+    }
+
+    pub fn new_from_elf(bin: &[u8]) -> Option<Box<Proc>> {
+        let mut p = Self::new_empty()?;
+
+        // Map code by loading the elf data.
+        let (entry, _) = elf::load64(&mut p.data.pt, bin)?;
+
+        // Allocate/map stack.
+        let ustack = match zallocpage() {
+            Err(_) => {
+                return None;
+            }
+            Ok(ustack) => ustack,
+        };
+        p.data.pt.mappg(Self::STACK_VA, ustack, perm::URW)?;
+        p.trapframe = Trapframe::default();
+        p.trapframe.regs.sp = Self::STACK_VA + sys::PAGESIZE - 16;
+        p.trapframe.epc = entry as usize;
+
+        Some(p)
     }
 
     pub fn kstackp(p: *mut Self) -> *const u8 {

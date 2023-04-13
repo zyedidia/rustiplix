@@ -50,7 +50,7 @@ pub extern "C" fn kerneltrap() {
 
 use super::regs::{rd_gp, rd_tp, Regs};
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 #[repr(C)]
 pub struct Trapframe {
     ktp: u64,
@@ -83,8 +83,8 @@ pub extern "C" fn usertrap(p: *mut Proc) {
     match cause {
         cause::ECALL_U => {
             let sysno = p.trapframe.regs.a7;
-            p.trapframe.regs.a0 = syscall(&mut p, sysno) as usize;
             p.trapframe.epc = csr!(sepc) + 4;
+            p.trapframe.regs.a0 = syscall(&mut p, sysno) as usize;
         }
         cause::STI => {
             timer::intr(timer::TIME_SLICE_US);

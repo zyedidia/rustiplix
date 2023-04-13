@@ -74,6 +74,33 @@ impl PageMap for Pagetable {
     }
 }
 
+pub struct VaMapping<'a> {
+    pte: &'a mut Pte,
+    va: usize,
+}
+
+impl VaMapping<'_> {
+    pub fn va(&self) -> usize {
+        self.va
+    }
+
+    pub fn pa(&self) -> usize {
+        self.pte.pa()
+    }
+
+    pub fn perm(&self) -> u8 {
+        self.pte.perm()
+    }
+
+    pub fn pte(&mut self) -> &mut Pte {
+        self.pte
+    }
+
+    pub fn pg(&self) -> &[u8] {
+        unsafe { core::slice::from_raw_parts(pa2ka(self.pte.pa()) as *const u8, sys::PAGESIZE) }
+    }
+}
+
 pub struct PtIter<'a> {
     idx: usize,
     va: usize,
@@ -113,7 +140,7 @@ impl PtIter<'_> {
 }
 
 impl<'a> Iterator for PtIter<'a> {
-    type Item = (&'a mut Pte, usize);
+    type Item = VaMapping<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut va = self.va;
@@ -126,6 +153,11 @@ impl<'a> Iterator for PtIter<'a> {
                 return None;
             }
         }
-        unsafe { Some((&mut *self.pte, va)) }
+        unsafe {
+            Some(VaMapping {
+                pte: &mut *self.pte,
+                va,
+            })
+        }
     }
 }
