@@ -116,6 +116,7 @@ impl Queue {
         assert!((*p).data.state == ProcState::Blocked);
         self.remove(p);
         (*p).data.state = ProcState::Runnable;
+        (*p).data.wq = None;
         RUN_QUEUE.lock().push_front_raw(p);
     }
 }

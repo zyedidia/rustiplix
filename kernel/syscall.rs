@@ -1,5 +1,5 @@
 use crate::proc::{Proc, ProcState};
-use crate::schedule::{QueueIter, EXIT_QUEUE, RUN_QUEUE, TICKS_QUEUE, WAIT_QUEUE};
+use crate::schedule::{QueueIter, QueueType, EXIT_QUEUE, RUN_QUEUE, TICKS_QUEUE, WAIT_QUEUE};
 use core::slice;
 
 mod num {
@@ -7,6 +7,7 @@ mod num {
     pub const SYS_GETPID: usize = 1;
     pub const SYS_EXIT: usize = 2;
     pub const SYS_FORK: usize = 3;
+    pub const SYS_WAIT: usize = 4;
     pub const SYS_SBRK: usize = 5;
     pub const SYS_USLEEP: usize = 6;
 }
@@ -45,6 +46,9 @@ pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
         num::SYS_USLEEP => {
             sys_usleep(p, p.trapframe.regs.arg0() as u64);
             ret = 0;
+        }
+        num::SYS_WAIT => {
+            ret = sys_wait(p);
         }
         _ => {
             println!("unknown syscall {}", sysno);
@@ -110,19 +114,16 @@ fn sys_exit(p: &mut Proc) -> ! {
 
     // TODO: reparent all children
 
-    // TODO: wake up any parents
-
-    // p.exit(&mut EXIT_QUEUE.lock());
-
-    // if !p.data.parent.is_null() {
-    //     unsafe {
-    //         if (*p.data.parent).data.state == ProcState::Blocked
-    //             && (*p.data.parent).data.wq == Some(QueueType::Wait)
-    //         {
-    //             WAIT_QUEUE.lock().wake(p.data.parent);
-    //         }
-    //     }
-    // }
+    if !p.data.parent.is_null() {
+        unsafe {
+            if (*p.data.parent).data.state == ProcState::Blocked
+                && (*p.data.parent).data.wq == Some(QueueType::Wait)
+            {
+                WAIT_QUEUE.lock().wake(p.data.parent);
+            }
+        }
+        p.exit(&mut EXIT_QUEUE.lock());
+    }
 
     p.yield_();
     panic!("exited process resumed");
@@ -137,6 +138,7 @@ fn sys_usleep(p: &mut Proc, us: u64) {
             break;
         }
         unsafe { p.block(&mut TICKS_QUEUE) };
+        p.yield_();
     }
     p.unblock();
 }
@@ -147,19 +149,21 @@ fn sys_wait(p: &mut Proc) -> isize {
     }
 
     loop {
-        let mut exited = EXIT_QUEUE.lock();
-        for zombie in QueueIter::new(&mut exited) {
-            unsafe {
-                if (*zombie).data.parent == p as *mut Proc {
-                    let pid = (*zombie).data.pid;
-                    exited.remove(zombie);
-                    core::ptr::drop_in_place(zombie);
-                    p.data.nchild -= 1;
-                    return pid as isize;
+        {
+            let mut exited = EXIT_QUEUE.lock();
+            for zombie in QueueIter::new(&mut exited) {
+                unsafe {
+                    if (*zombie).data.parent == p as *mut Proc {
+                        let pid = (*zombie).data.pid;
+                        exited.remove(zombie);
+                        core::ptr::drop_in_place(zombie);
+                        p.data.nchild -= 1;
+                        return pid as isize;
+                    }
                 }
             }
         }
-        let mut wq = WAIT_QUEUE.lock();
-        p.block(&mut wq);
+        p.block(&mut WAIT_QUEUE.lock());
+        p.yield_();
     }
 }

@@ -166,7 +166,6 @@ impl Proc {
         self.data.state = state;
         self.data.wq = Some(queue.id);
         unsafe { queue.push_front_raw(self as *mut Proc) };
-        self.yield_();
     }
 
     pub fn unblock(&mut self) {

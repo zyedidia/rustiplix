@@ -44,9 +44,9 @@ pub extern "C" fn kmain() {
     let hello = include_bytes!("../user/hello/hello.elf");
 
     let proc1 = Proc::new_from_elf(hello).unwrap();
-    let proc2 = Proc::new_from_elf(hello).unwrap();
+    // let proc2 = Proc::new_from_elf(hello).unwrap();
     RUN_QUEUE.lock().push_front(proc1);
-    RUN_QUEUE.lock().push_front(proc2);
+    // RUN_QUEUE.lock().push_front(proc2);
 
     unsafe { irq::on() };
 

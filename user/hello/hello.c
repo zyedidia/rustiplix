@@ -7,18 +7,18 @@
 
 #include "syslib.h"
 
-void delay_cycles() {
-    usleep(500 * 1000);
-    /* for (int i = 0; i < 1000000000 / 2; i++) { */
-    /*     asm volatile ("nop"); */
-    /* } */
-}
-
 int main() {
     fork();
+    int child = fork();
     int pid = getpid();
+    if (child != 0) {
+        printf("%d: waiting\n", pid);
+        int x = wait(NULL);
+        printf("%d: done waiting for %d\n", pid, x);
+    }
+
     for (int i = 0; i < 5; i++) {
         printf("%d: loop %d\n", pid, i);
-        delay_cycles();
+        usleep(100 * 1000);
     }
 }
