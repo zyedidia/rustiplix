@@ -3,8 +3,6 @@ use crate::kalloc::kallocpage;
 use crate::sys;
 use crate::vm::{perm, PageMap};
 
-use core::intrinsics::write_bytes;
-
 const MAGIC: u32 = 0x464C457F; // "\x7ELF" in little endian
 const PROG_LOAD: u32 = 1;
 
@@ -77,7 +75,7 @@ pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
                 Ok(mem) => mem,
             };
             // TODO: do this without unsafe
-            unsafe { write_bytes(mem.as_mut_ptr(), 0, pad as usize) };
+            mem[0..pad as usize].fill(0);
             let mut written = pad as usize;
             pad = 0;
             let soff = va - ph.vaddr;
@@ -92,7 +90,7 @@ pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
             }
 
             // Set the rest of the data to 0.
-            unsafe { write_bytes(mem.as_mut_ptr().add(written), 0, sys::PAGESIZE - written) };
+            mem[written..].fill(0);
             // Map the page with full permissions.
             pt.mappg(va as usize, mem, perm::URWX)?;
 
