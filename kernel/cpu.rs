@@ -46,23 +46,23 @@ pub unsafe fn init_cpu(coreid: usize, primary: bool) {
 }
 
 // Get the core-local CPU struct without any guard. Requires that interrupts are disabled.
-pub unsafe fn cpu_noguard<'a>() -> &'a Cpu {
+pub unsafe fn cpu_noguard() -> &'static mut Cpu {
     rd_cpu()
 }
 
-pub fn cpu<'a>() -> CpuGuard<'a> {
+pub fn cpu() -> CpuGuard {
     CpuGuard::new()
 }
 
-pub struct CpuGuard<'a> {
-    cpu: &'a mut Cpu,
+pub struct CpuGuard {
+    cpu: &'static mut Cpu,
     was_en: bool,
 }
 
 use crate::arch::trap::irq;
 use core::ops::Deref;
 
-impl CpuGuard<'_> {
+impl CpuGuard {
     pub fn new() -> Self {
         let was_en = irq::enabled();
         unsafe {
@@ -76,20 +76,20 @@ impl CpuGuard<'_> {
     }
 }
 
-impl Default for CpuGuard<'_> {
+impl Default for CpuGuard {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Deref for CpuGuard<'_> {
+impl Deref for CpuGuard {
     type Target = Cpu;
     fn deref(&self) -> &Cpu {
         self.cpu
     }
 }
 
-impl Drop for CpuGuard<'_> {
+impl Drop for CpuGuard {
     fn drop(&mut self) {
         if self.was_en {
             unsafe { irq::on() }
