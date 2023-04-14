@@ -78,9 +78,11 @@ return b{
     $ $(lib.bootloader.payload): $(src.bootloader) $(src.kernel) $(src.cargo)
         cargo -C bootloader build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features) --features payload
         cp $objdir/libbootloader.a $output
+        rm $objdir/libbootloader.a
     $ $(lib.bootloader.uart): $(src.bootloader) $(src.kernel) $(src.cargo)
         cargo -C bootloader build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features) --features uart
         cp $objdir/libbootloader.a $output
+        rm $objdir/libbootloader.a
     $ $(lib.kmain): $(src.kmain) $(src.kernel) $(src.cargo) user/hello/hello.elf
         cargo -C kmain build $(flags.cargo.base) $(flags.cargo.build) $(flags.cargo.features)
 
