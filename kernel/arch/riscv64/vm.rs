@@ -53,8 +53,10 @@ impl Pte {
         ppn2, set_ppn2: 53, 28;
     );
 
+    // Make this PTE valid.
     fn validate(&mut self) {
         self.set_valid(1);
+        // Accessed and dirty bits must be set to 1.
         self.set_accessed(1);
         self.set_dirty(1);
     }
@@ -128,6 +130,10 @@ impl Pagetable {
         }
     }
 
+    /// Walks the pagetable, looking for the mapping for 'va'. Stops at 'endlevel'. If a PTE exists
+    /// for the mapping, a reference to it and its level is returned. Otherwise if 'ALLOC' is true,
+    /// this function allocates new pagetables as necessary to make the PTE exist. Otherwise
+    /// returns None.
     pub fn walk<const ALLOC: bool>(
         &mut self,
         va: usize,
@@ -164,6 +170,7 @@ impl Pagetable {
         Some((&mut pt.ptes[vpn(endlevel as usize, va)], endlevel))
     }
 
+    /// Free all internal pagetables owned by this pagetable.
     fn free(&mut self, level: usize) {
         // Iterate over internal pagetables and recursively free the raw pointers.
         for i in 0..self.ptes.len() {
@@ -184,6 +191,8 @@ impl Pagetable {
     }
 
     #[must_use]
+    /// Install a new virtual memory mapping for 'va' -> 'pa', with size 'level' and 'perm'
+    /// permissions. Returns false if the mapping failed (out of memory).
     pub fn map(&mut self, va: usize, pa: usize, level: PtLevel, perm: u8) -> bool {
         assert!(perm != 0);
         let pte = match self.walk::<true>(va, level) {
@@ -198,6 +207,7 @@ impl Pagetable {
         true
     }
 
+    /// Maps a Giga page. Cannot fail because mapping such a page does not require sub-levels.
     pub fn map_giga(&mut self, va: usize, pa: usize, perm: u8) {
         assert!(perm != 0);
         let vpn = vpn(PtLevel::Giga as usize, va);
@@ -206,6 +216,7 @@ impl Pagetable {
         self.ptes[vpn].validate();
     }
 
+    /// Returns the 'satp' value for installing this pagetable into the system.
     pub fn satp(&self) -> usize {
         let pn = ka2pa(&self.ptes[0] as *const _ as usize) / sys::PAGESIZE;
         pn.set_bits(63, 60, SV39)
@@ -227,6 +238,7 @@ pub fn vm_fence() {
 
 use crate::board::machine;
 
+/// Maps the kernel into the pagetable.
 pub fn kernel_procmap(pt: &mut Pagetable) {
     for mem in machine::MEM_RANGES {
         for pa in (mem.start..mem.start + mem.size).step_by(sys::gb(1) as usize) {

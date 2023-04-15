@@ -38,7 +38,8 @@ struct ProgHeader64 {
     align: u64,
 }
 
-// Returns the entrypoint and the breakpoint.
+/// Loads the given ELF binary into the given pagetable. If successful, returns the ELF entrypoint
+/// and brkpoint (max data address). The ELF binary must be aligned to an 8-byte boundary.
 pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
     // The elf data must be properly aligned.
     assert!(&elfdat[0] as *const _ as usize % 8 == 0);

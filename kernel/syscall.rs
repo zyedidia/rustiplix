@@ -20,6 +20,7 @@ mod err {
     pub const CHILD: isize = -10;
 }
 
+/// System call handler.
 pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
     let ret;
     match sysno {
@@ -58,10 +59,13 @@ pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
     ret
 }
 
+/// Returns the process's PID.
 fn sys_getpid(p: &mut Proc) -> u32 {
     p.data.pid
 }
 
+/// Write to 'sz' bytes at 'addr' into 'fd' on behalf of the process. Returns the number of bytes
+/// written, or an error.
 fn sys_write(_p: &mut Proc, fd: i32, addr: usize, sz: usize) -> isize {
     if sz == 0 {
         return 0;
@@ -89,6 +93,9 @@ fn sys_write(_p: &mut Proc, fd: i32, addr: usize, sz: usize) -> isize {
     sz as isize
 }
 
+/// Create a new child process that is a clone of the current process. Returns:
+/// * 0 to the child.
+/// * Child's PID to the parent, or an error if the child could not be created.
 fn sys_fork(p: &mut Proc) -> isize {
     let mut child = match Proc::new_from_parent(p) {
         None => {
@@ -108,6 +115,7 @@ fn sys_sbrk(_p: &mut Proc) -> isize {
     -1
 }
 
+/// Exit the current process and switches back to the scheduler.
 fn sys_exit(p: &mut Proc) -> ! {
     println!("{}: exited", p.data.pid);
     p.data.state = ProcState::Exited;
@@ -116,6 +124,7 @@ fn sys_exit(p: &mut Proc) -> ! {
 
     if !p.data.parent.is_null() {
         unsafe {
+            // Wake up the parent if it is waiting for the child to exit.
             if (*p.data.parent).data.state == ProcState::Blocked
                 && (*p.data.parent).data.wq == Some(QueueType::Wait)
             {
@@ -129,6 +138,7 @@ fn sys_exit(p: &mut Proc) -> ! {
     panic!("exited process resumed");
 }
 
+/// Wait for 'us' microseconds.
 fn sys_usleep(p: &mut Proc, us: u64) {
     use crate::timer;
     let start = timer::time();
@@ -137,23 +147,32 @@ fn sys_usleep(p: &mut Proc, us: u64) {
         if timer::us_since(start) >= us {
             break;
         }
+        // Enter the ticks wait queue that will be woken up every timer interrupt.
         unsafe { p.block(&mut TICKS_QUEUE) };
         p.yield_();
+        // A timer interrupt has occurred and we are now runnable. Recheck the condition, and jump
+        // back on the wait queue if there is still more time to wait.
     }
-    p.unblock();
 }
 
+/// Wait for a child to exit. Returns the PID of the exited child.
 fn sys_wait(p: &mut Proc) -> isize {
     if p.data.nchild == 0 {
+        // No children.
         return err::CHILD;
     }
 
     loop {
         {
+            // Look through all processes that have exited and are waiting for a parent to wait for
+            // them (zombies).
             let mut exited = EXIT_QUEUE.lock();
             for zombie in QueueIter::new(&mut exited) {
                 unsafe {
+                    // This zombie has 'p' as a parent.
                     if (*zombie).data.parent == p as *mut Proc {
+                        // Read the child's PID, and then remove it from the exit queue and free
+                        // it.
                         let pid = (*zombie).data.pid;
                         exited.remove(zombie);
                         core::ptr::drop_in_place(zombie);
@@ -163,6 +182,7 @@ fn sys_wait(p: &mut Proc) -> isize {
                 }
             }
         }
+        // Push onto the wait queue and yield. We will be woken up when one of our children exits.
         p.block(&mut WAIT_QUEUE.lock());
         p.yield_();
     }

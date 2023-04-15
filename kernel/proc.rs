@@ -17,11 +17,11 @@ static NEXTPID: AtomicU32 = AtomicU32::new(1);
 #[derive(PartialEq)]
 pub enum ProcState {
     Runnable,
-    Running,
     Blocked,
     Exited,
 }
 
+/// Process metadata.
 pub struct ProcData {
     pub pid: u32,
     pub pt: Box<Pagetable>,
@@ -29,16 +29,22 @@ pub struct ProcData {
     pub parent: *mut Proc,
     pub wq: Option<QueueType>,
 
+    // Context for kernel context switches.
     pub context: Context,
 
+    // Wait/run queue links. These are modified by scheduler::Queue.
     pub next: *mut Proc,
     pub prev: *mut Proc,
 
     pub state: ProcState,
 }
 
+/// Process struct, which contains the process metadata, trapframe information, and the kernel
+/// stack.
 #[repr(C)]
 pub struct Proc {
+    /// The trapframe stores the registers and context of the process when a trap occurs, and is
+    /// used to restore this information when the process resumes after the trap.
     pub trapframe: Trapframe,
     pub data: ProcData,
     canary: u64,
@@ -49,11 +55,18 @@ pub struct Proc {
 struct KStack([u8; 3008]);
 
 impl Proc {
+    /// Virtual address of the user stack.
     pub const STACK_VA: usize = 0x7fff0000;
+    /// Size of a user stack.
     pub const STACK_SIZE: usize = sys::PAGESIZE;
+    /// Maximum virtual address that a user process can access.
     pub const MAX_VA: usize = Self::STACK_VA + Self::STACK_SIZE;
+    /// Stack canary.
     pub const CANARY: u64 = 0xfeedface_deadbeef;
 
+    /// Constructs a new empty process. This process is given an empty pagetable with only the
+    /// kernel mappings, and a valid kernel context that initializes the process to return into
+    /// Proc::forkret.
     fn new_empty() -> Option<Box<Proc>> {
         let mut pt = match zalloc::<Pagetable>() {
             Err(_) => {
@@ -63,6 +76,8 @@ impl Proc {
         };
         kernel_procmap(&mut pt);
 
+        // We have to use try_new_uninit to make sure this process is allocated directly into the
+        // heap (otherwise might cause a stack overflow).
         let mut proc = unsafe {
             let mut data = match Box::<Proc>::try_new_uninit() {
                 Err(_) => {
@@ -94,6 +109,8 @@ impl Proc {
         Some(proc)
     }
 
+    /// Allocates a new process given a parent. The new process copies all user mappings from the
+    /// parent into its pagetable, and copies over the parent's trapframe (registers and epc).
     pub fn new_from_parent(parent: &mut Proc) -> Option<Box<Proc>> {
         let mut p = Self::new_empty()?;
 
@@ -114,6 +131,9 @@ impl Proc {
         Some(p)
     }
 
+    /// Allocates a new process from an ELF binary. The bytes must be 64-bit aligned. The process
+    /// pagetable is initialized from the ELF segments and is given a valid user stack and
+    /// trapframe that returns into the ELF entrypoint.
     pub fn new_from_elf(bin: &[u8]) -> Option<Box<Proc>> {
         let mut p = Self::new_empty()?;
 
@@ -135,6 +155,7 @@ impl Proc {
         Some(p)
     }
 
+    /// Returns a pointer to this process's kernel stack.
     pub fn kstackp(p: *mut Self) -> *const u8 {
         unsafe {
             let len = (*p).kstack.0.len();
@@ -142,10 +163,13 @@ impl Proc {
         }
     }
 
+    /// Verifies that the kernel stack canary is valid.
     pub fn check_stack(&mut self) {
         assert!(self.canary == Self::CANARY);
     }
 
+    /// Yields this process and switches back to the current core's scheduler. Interrupts must be
+    /// disabled to call this function.
     pub fn yield_(&mut self) {
         use crate::arch::trap::irq;
         use crate::schedule::{kswitch, CONTEXT};
@@ -154,24 +178,30 @@ impl Proc {
         unsafe { kswitch(&mut self.data.context, &mut CONTEXT) }
     }
 
+    /// Puts this process on the given wait queue.
     pub fn block(&mut self, queue: &mut Queue) {
         self.wait(queue, ProcState::Blocked);
     }
 
+    /// Puts this process on the given exit queue.
     pub fn exit(&mut self, queue: &mut Queue) {
         self.wait(queue, ProcState::Exited);
     }
 
+    // Assigns this process state and registers it on the given queue. It is up to the caller to
+    // then call yield_ to actually stop the current process.
     fn wait(&mut self, queue: &mut Queue, state: ProcState) {
         self.data.state = state;
         self.data.wq = Some(queue.id);
         unsafe { queue.push_front_raw(self as *mut Proc) };
     }
 
+    /// Marks this process as not on any wait queue.
     pub fn unblock(&mut self) {
         self.data.wq = None;
     }
 
+    /// This is the entrypoint for newly created processes.
     pub unsafe extern "C" fn forkret(proc: *mut Proc) {
         usertrapret(proc);
     }

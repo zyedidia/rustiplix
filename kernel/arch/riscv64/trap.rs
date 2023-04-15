@@ -25,6 +25,7 @@ use crate::trap;
 use alloc::boxed::Box;
 
 #[no_mangle]
+/// When a trap occurs in kernel mode, execution switches to here.
 pub extern "C" fn kerneltrap() {
     let sepc = csr!(sepc);
     let scause = csr!(scause);
@@ -32,6 +33,7 @@ pub extern "C" fn kerneltrap() {
     // println!("[kernel trap] sepc: {:#x}, cause: {:#x}", sepc, scause,);
 
     if scause == cause::STI {
+        // Timer interrupt.
         trap::irq_handler_kern(trap::Irq::Timer);
     } else {
         panic!(
@@ -60,13 +62,18 @@ use crate::proc::Proc;
 use crate::syscall::syscall;
 
 extern "C" {
+    // Assembly routine for returning to user-mode.
     fn userret(p: *mut Trapframe) -> !;
+    // Assembly entrypoint for user traps.
     fn uservec();
+    // Assembly entrypoint for kernel traps.
     fn kernelvec();
 }
 
 #[no_mangle]
+/// Called when a user process experiences a trap.
 pub extern "C" fn usertrap(p: *mut Proc) {
+    // Install the kernel trap handler.
     csr!(stvec = kernelvec);
 
     let mut p = unsafe { Box::<Proc>::from_raw(p) };
@@ -81,11 +88,13 @@ pub extern "C" fn usertrap(p: *mut Proc) {
 
     match cause {
         cause::ECALL_U => {
+            // System call.
             let sysno = p.trapframe.regs.a7;
             p.trapframe.epc = csr!(sepc) + 4;
             p.trapframe.regs.a0 = syscall(&mut p, sysno) as usize;
         }
         cause::STI => {
+            // Timer interrupt.
             trap::irq_handler_user(&mut p, trap::Irq::Timer);
         }
         _ => {
@@ -106,9 +115,12 @@ use super::csr::sstatus;
 use super::vm::vm_fence;
 use crate::bit::Bit;
 
+/// Return to user-mode and execute process 'p'.
 pub unsafe fn usertrapret(p: *mut Proc) -> ! {
+    // Disable interrupts to set up user-mode.
     irq::off();
 
+    // Reset trap handler.
     csr!(stvec = uservec);
 
     // Set up trapframe.
@@ -122,7 +134,9 @@ pub unsafe fn usertrapret(p: *mut Proc) -> ! {
             .set_bit(sstatus::SPP, false) // force return to user mode
             .set_bit(sstatus::SPIE, true) // enable interrupts in user mode
     );
+    // Set exception return address.
     csr!(sepc = (*p).trapframe.epc);
+    // Switch pagetables.
     csr!(satp = (*p).data.pt.satp());
     vm_fence();
 

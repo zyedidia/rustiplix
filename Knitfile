@@ -128,6 +128,9 @@ return b{
 
     $ check:VB: format-check clippy
 
+    $ analyze:VB:
+        rustalyzer $(src.kernel)
+
     $ doc/generated:B:
         cargo -C kernel doc $(flags.cargo.base)
         mv .target/$target/doc $output

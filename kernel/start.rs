@@ -13,6 +13,7 @@ unsafe extern "C" fn start(coreid: usize, primary: bool) {
     kmain();
 }
 
+/// Initializes the BSS segment.
 unsafe fn init_bss() {
     extern "C" {
         static mut _bss_start: u64;
