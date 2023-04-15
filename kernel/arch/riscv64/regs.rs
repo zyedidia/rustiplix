@@ -97,7 +97,7 @@ use super::vm::Pagetable;
 
 impl Context {
     pub const fn zero() -> Self {
-        return Self {
+        Self {
             ra: 0,
             sp: 0,
             s0: 0,
@@ -114,7 +114,7 @@ impl Context {
             s11: 0,
             satp: 0,
             proc: null_mut(),
-        };
+        }
     }
 
     pub fn set_pt(&mut self, pt: &Pagetable) {
@@ -122,7 +122,7 @@ impl Context {
     }
 
     pub fn new(sp: usize, ra: usize) -> Self {
-        return Self {
+        Self {
             ra,
             sp,
             s0: 0,
@@ -139,6 +139,6 @@ impl Context {
             s11: 0,
             satp: 0,
             proc: null_mut(),
-        };
+        }
     }
 }

@@ -22,7 +22,7 @@ unsafe impl<const N: usize> GlobalAlloc for LockedHeap<N> {
         if let Ok(ptr) = heap.allocate(layout) {
             return ptr;
         }
-        return core::ptr::null_mut();
+        core::ptr::null_mut()
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -67,11 +67,11 @@ pub fn zalloc<T: Zero>() -> Result<Box<T>, AllocError> {
 
 pub fn zalloc_raw<T: Zero>() -> Option<NonNull<T>> {
     let val = unsafe { ALLOCATOR.alloc(Layout::new::<T>()) as *mut T };
-    if val == core::ptr::null_mut() {
+    if val.is_null() {
         return None;
     }
     unsafe {
-        core::intrinsics::write_bytes(val, 0, core::mem::size_of::<T>());
+        core::intrinsics::write_bytes(val, 0, 1);
         Some(NonNull::new_unchecked(val))
     }
 }

@@ -156,11 +156,9 @@ impl Proc {
     }
 
     /// Returns a pointer to this process's kernel stack.
-    pub fn kstackp(p: *mut Self) -> *const u8 {
-        unsafe {
-            let len = (*p).kstack.0.len();
-            (*p).kstack.0.as_ptr().add(len - 16)
-        }
+    pub unsafe fn kstackp(p: *mut Self) -> *const u8 {
+        let len = (*p).kstack.0.len();
+        (*p).kstack.0.as_ptr().add(len - 16)
     }
 
     /// Verifies that the kernel stack canary is valid.

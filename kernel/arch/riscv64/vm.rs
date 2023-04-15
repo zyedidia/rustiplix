@@ -171,7 +171,7 @@ impl Pagetable {
     }
 
     /// Free all internal pagetables owned by this pagetable.
-    fn free(&mut self, level: usize) {
+    fn free(&mut self) {
         // Iterate over internal pagetables and recursively free the raw pointers.
         for i in 0..self.ptes.len() {
             let pte = &mut self.ptes[i];
@@ -179,7 +179,7 @@ impl Pagetable {
                 pte.data = 0;
             } else if pte.valid() != 0 {
                 let pt = unsafe { &mut *(pa2ka(pte.pa()) as *mut Pagetable) };
-                pt.free(level - 1);
+                pt.free();
 
                 unsafe {
                     kfree(pt);
@@ -225,7 +225,7 @@ impl Pagetable {
 
 impl Drop for Pagetable {
     fn drop(&mut self) {
-        self.free(PtLevel::Giga as usize);
+        self.free();
     }
 }
 

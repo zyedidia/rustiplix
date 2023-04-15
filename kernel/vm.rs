@@ -172,7 +172,7 @@ impl<'a> Iterator for PtIter<'a> {
             return None;
         }
         // Advance while the current PTE is null (invalid or a large page).
-        while self.pte == core::ptr::null_mut() {
+        while self.pte.is_null() {
             va = self.va;
             if !self.advance() {
                 return None;

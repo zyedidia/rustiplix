@@ -22,41 +22,27 @@ mod err {
 
 /// System call handler.
 pub fn syscall(p: &mut Proc, sysno: usize) -> isize {
-    let ret;
     match sysno {
-        num::SYS_GETPID => {
-            ret = sys_getpid(p) as isize;
-        }
-        num::SYS_WRITE => {
-            ret = sys_write(
-                p,
-                p.trapframe.regs.arg0() as i32,
-                p.trapframe.regs.arg1(),
-                p.trapframe.regs.arg2(),
-            );
-        }
-        num::SYS_SBRK => {
-            ret = sys_sbrk(p);
-        }
-        num::SYS_EXIT => {
-            sys_exit(p);
-        }
-        num::SYS_FORK => {
-            ret = sys_fork(p);
-        }
+        num::SYS_GETPID => sys_getpid(p) as isize,
+        num::SYS_WRITE => sys_write(
+            p,
+            p.trapframe.regs.arg0() as i32,
+            p.trapframe.regs.arg1(),
+            p.trapframe.regs.arg2(),
+        ),
+        num::SYS_SBRK => sys_sbrk(p),
+        num::SYS_EXIT => sys_exit(p),
+        num::SYS_FORK => sys_fork(p),
         num::SYS_USLEEP => {
             sys_usleep(p, p.trapframe.regs.arg0() as u64);
-            ret = 0;
+            0
         }
-        num::SYS_WAIT => {
-            ret = sys_wait(p);
-        }
+        num::SYS_WAIT => sys_wait(p),
         _ => {
             println!("unknown syscall {}", sysno);
-            return err::NOSYS;
+            err::NOSYS
         }
     }
-    ret
 }
 
 /// Returns the process's PID.
@@ -108,7 +94,7 @@ fn sys_fork(p: &mut Proc) -> isize {
 
     let pid = child.data.pid;
     RUN_QUEUE.lock().push_front(child);
-    return pid as isize;
+    pid as isize
 }
 
 fn sys_sbrk(_p: &mut Proc) -> isize {
@@ -167,7 +153,7 @@ fn sys_wait(p: &mut Proc) -> isize {
             // Look through all processes that have exited and are waiting for a parent to wait for
             // them (zombies).
             let mut exited = EXIT_QUEUE.lock();
-            for zombie in QueueIter::new(&mut exited) {
+            for zombie in QueueIter::new(&exited) {
                 unsafe {
                     // This zombie has 'p' as a parent.
                     if (*zombie).data.parent == p as *mut Proc {

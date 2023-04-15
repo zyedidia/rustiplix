@@ -116,15 +116,18 @@ return b{
         ./$(plboot.bin) prog $input
 
     $ clippy:VB: user/hello/hello.elf
-        cargo -C kmain clippy $(flags.cargo.base) -- $(flags.clippy)
-        cargo -C bootloader clippy $(flags.cargo.base) -- $(flags.clippy)
+        cargo clippy --manifest-path=kmain/Cargo.toml $(flags.cargo.base) -- $(flags.clippy)
+        cargo clippy --manifest-path=bootloader/Cargo.toml $(flags.cargo.base) -- $(flags.clippy)
+        cargo clippy --manifest-path=kernel/Cargo.toml $(flags.cargo.base) -- $(flags.clippy)
 
     $ format:VB:
-        cargo -C kmain fmt $(flags.cargo.base)
-        cargo -C bootloader fmt $(flags.cargo.base)
+        cargo fmt --manifest-path=kernel/Cargo.toml $(flags.cargo.base)
+        cargo fmt --manifest-path=kmain/Cargo.toml $(flags.cargo.base)
+        cargo fmt --manifest-path=bootloader/Cargo.toml $(flags.cargo.base)
     $ format-check:VB:
-        cargo -C kmain fmt --check $(flags.cargo.base)
-        cargo -C bootloader fmt --check $(flags.cargo.base)
+        cargo fmt --manifest-path=kernel/Cargo.toml --check $(flags.cargo.base)
+        cargo fmt --manifest-path=kmain/Cargo.toml --check $(flags.cargo.base)
+        cargo fmt --manifest-path=bootloader/Cargo.toml --check $(flags.cargo.base)
 
     $ check:VB: format-check clippy
 
@@ -132,7 +135,7 @@ return b{
         rustalyzer $(src.kernel)
 
     $ doc/generated:B:
-        cargo -C kernel doc $(flags.cargo.base)
+        cargo doc --manifest-path=kernel/Cargo.toml $(flags.cargo.base)
         mv .target/$target/doc $output
 
     $ $(plboot.bin): $(plboot.src)

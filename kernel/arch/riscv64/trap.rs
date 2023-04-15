@@ -72,6 +72,11 @@ extern "C" {
 
 #[no_mangle]
 /// Called when a user process experiences a trap.
+
+// Clippy wants us to mark this function as unsafe because it dereferences a raw pointer, but it
+// isn't ever called by Rust code (only directly by assembly), so it would unnecessarily sacrifice
+// some safety checking to mark the whole function as unsafe.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn usertrap(p: *mut Proc) {
     // Install the kernel trap handler.
     csr!(stvec = kernelvec);

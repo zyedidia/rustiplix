@@ -35,7 +35,7 @@ impl QueueIter {
 impl Iterator for QueueIter {
     type Item = *mut Proc;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cur == null_mut() {
+        if self.cur.is_null() {
             return None;
         }
         let ret = self.cur;
@@ -73,7 +73,7 @@ impl Queue {
     pub unsafe fn push_front_raw(&mut self, n: *mut Proc) {
         (*n).data.next = self.front;
         (*n).data.prev = null_mut();
-        if self.front != null_mut() {
+        if !self.front.is_null() {
             (*self.front).data.prev = n;
         } else {
             self.back = n;
@@ -85,12 +85,12 @@ impl Queue {
     /// Removes a process from the queue.
     pub unsafe fn remove(&mut self, n: *mut Proc) {
         assert!(self.size > 0);
-        if (*n).data.next != null_mut() {
+        if !(*n).data.next.is_null() {
             (*(*n).data.next).data.prev = (*n).data.prev;
         } else {
             self.back = (*n).data.prev;
         }
-        if (*n).data.prev != null_mut() {
+        if !(*n).data.prev.is_null() {
             (*(*n).data.prev).data.next = (*n).data.next;
         } else {
             self.front = (*n).data.next;
@@ -102,7 +102,7 @@ impl Queue {
     /// from the queue to the caller.
     pub fn pop_back(&mut self) -> Option<Box<Proc>> {
         let b = self.back;
-        if b == null_mut() {
+        if b.is_null() {
             return None;
         }
         unsafe {
@@ -114,7 +114,7 @@ impl Queue {
     /// Wakes up all processes on the queue by removing them, marking them as runnable, and pushing
     /// them onto the RUN_QUEUE.
     pub fn wake_all(&mut self) {
-        while self.front != null_mut() {
+        while !self.front.is_null() {
             unsafe {
                 // Removes front from the queue.
                 self.wake(self.front);
