@@ -21,7 +21,7 @@ pub fn place(n: usize, addr: usize, flags: usize) {
 
 fn clear(n: usize) {
     csr!(tselect = n);
-    csr!(tdata1 = 0 | brkpt::MATCH6);
+    csr!(tdata1 = brkpt::MATCH6);
 }
 
 fn place_mismatch(n: usize, addr: usize, flags: usize) {
