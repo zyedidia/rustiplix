@@ -16,6 +16,14 @@ pub extern "C" fn monitortrap(regs: &mut Regs) {
             csr!(mie = csr!(mie).set_bit(mie::MTIE, false));
             csr!(mip = csr!(mip).set_bit(mip::STIP, true));
         }
+        cause::BREAKPOINT => {
+            panic!(
+                "[monitortrap breakpoint]: core: {}, epc: {:#x}, mtval {:#x}",
+                csr!(mhartid),
+                csr!(mepc),
+                csr!(mtval)
+            );
+        }
         _ => {
             panic!(
                 "[unhandled] monitortrap: core: {}, cause: {:#x}, epc: {:#x}, mtval: {:#x}",
@@ -35,6 +43,13 @@ fn fwi_handler(regs: &mut Regs) {
         }
         x if x == Func::SetTimer as usize => {
             set_timer(regs.a0 as u64);
+        }
+        x if x == Func::SetWatchpoint as usize => {
+            use super::{
+                debug,
+                debug::brkpt::{LOAD, STORE, SUPER},
+            };
+            debug::place(0, regs.a0, LOAD | STORE | SUPER);
         }
         _ => {
             // error

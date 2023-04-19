@@ -82,6 +82,7 @@ pub extern "C" fn usertrap(p: *mut Proc) {
     csr!(stvec = kernelvec);
 
     let mut p = unsafe { Box::<Proc>::from_raw(p) };
+    p.watch_canary();
 
     // println!(
     //     "[user trap] epc: {:#x}, cause: {:#x}",

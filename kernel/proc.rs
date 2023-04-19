@@ -166,6 +166,11 @@ impl Proc {
         assert!(self.canary == Self::CANARY);
     }
 
+    pub fn watch_canary(&mut self) {
+        use crate::arch::fwi;
+        fwi::set_watchpoint(&self.canary as *const u64 as usize);
+    }
+
     /// Yields this process and switches back to the current core's scheduler. Interrupts must be
     /// disabled to call this function.
     pub fn yield_(&mut self) {
@@ -174,6 +179,7 @@ impl Proc {
         assert!(!irq::enabled());
 
         unsafe { kswitch(&mut self.data.context, &mut CONTEXT) }
+        self.watch_canary();
     }
 
     /// Puts this process on the given wait queue.
