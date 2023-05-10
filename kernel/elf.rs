@@ -75,7 +75,6 @@ pub fn load64(pt: &mut Pagetable, elfdat: &[u8]) -> Option<(u64, u64)> {
                 }
                 Ok(mem) => mem,
             };
-            // TODO: do this without unsafe
             mem[0..pad as usize].fill(0);
             let mut written = pad as usize;
             pad = 0;

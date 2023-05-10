@@ -1,11 +1,11 @@
 use kernel::arch::timer;
 use kernel::arch::trap::irq;
 use kernel::cpu::cpu;
+use kernel::include_bytes_align_as;
 use kernel::kalloc::init_alloc;
 use kernel::println;
 use kernel::proc::Proc;
 use kernel::schedule::{scheduler, RUN_QUEUE};
-use kernel::include_bytes_align_as;
 
 struct Foo {
     i: i64,
