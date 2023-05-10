@@ -5,6 +5,7 @@ use kernel::kalloc::init_alloc;
 use kernel::println;
 use kernel::proc::Proc;
 use kernel::schedule::{scheduler, RUN_QUEUE};
+use kernel::include_bytes_align_as;
 
 struct Foo {
     i: i64,
@@ -41,7 +42,7 @@ pub extern "C" fn kmain() {
         return;
     }
 
-    let hello = include_bytes!("../user/hello/hello.elf");
+    let hello = include_bytes_align_as!(u64, "../user/hello/hello.elf");
     let proc1 = Proc::new_from_elf(hello).unwrap();
     RUN_QUEUE.lock().push_front(proc1);
 

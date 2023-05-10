@@ -17,6 +17,8 @@ pub extern crate alloc;
 pub mod fmt;
 #[macro_use]
 pub mod bitfield;
+#[macro_use]
+pub mod align;
 
 pub mod arch;
 pub mod bit;
